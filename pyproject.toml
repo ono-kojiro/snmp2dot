@@ -1,0 +1,32 @@
+[build-system]
+requires = [ "setuptools >= 77.0.3, <= 80.3.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "snmp2dot"
+version = "0.0.1"
+
+license = { file = "LICENSE" }
+
+dependencies = [
+  "pyyaml",
+  "pytest",
+]
+
+[project.scripts]
+snmp2json = "snmp2dot.snmp2json:main"
+snmp2db   = "snmp2dot.snmp2db:main"
+
+arp2json = "snmp2dot.arp2json:main"
+arp2db   = "snmp2dot.arp2db:main"
+
+db2json  = "snmp2dot.db2json:main"
+json2dot = "snmp2dot.json2dot:main"
+
+[tool.setuptools.package-data]
+mypackage = [ "bin/hoge.sh" ]
+
+[tool.pytest.ini_options]
+pythonpath = "src"
+#testpaths = [ "tests", ]
+
