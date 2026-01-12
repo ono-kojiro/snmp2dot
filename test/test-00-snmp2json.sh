@@ -9,7 +9,16 @@ top_dir="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 
 snmp2json="../src/snmp2dot/snmp2json.py"
 
-echo "1..2"
+echo "1..3"
+
+got=`${snmp2json} --version`
+exp='0.0.1'
+if [ "$got" = "$exp" ]; then
+  echo "ok - version $got"
+else
+  echo "not ok - $got != $exp"
+fi
+
 for agent in ${agents}; do
   logfile="${agent}.log"
   jsonfile="${agent}.json"

@@ -21,6 +21,11 @@ from snmp2dot.Port     import Port
 
 import logging
 
+import snmp2dot
+
+def version():
+    print('{0}'.format(snmp2dot.__version__))
+
 def usage():
     print("Usage : {0}".format(sys.argv[0]))
 
@@ -95,8 +100,8 @@ def main():
     loglevel = 'info'
 
     for o, a in opts:
-        if o == "-v":
-            usage()
+        if o in ("-v", "--version"):
+            version()
             sys.exit(0)
         elif o in ("-h", "--help"):
             usage()

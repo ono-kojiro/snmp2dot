@@ -14,7 +14,7 @@ pytest :
 	pytest
 
 prove :
-	PYTHONPATH="$(top_srcdir)/lib" prove $(TESTSCRIPTS_SH)
+	PYTHONPATH="$(top_srcdir)/lib" prove -v $(TESTSCRIPTS_SH)
 
 .PHONY : \
 	all test pytest probe

@@ -9,8 +9,13 @@ import yaml
 from pprint import pprint
 import json
 
+import snmp2dot
+
 def usage():
     print("Usage : {0}".format(sys.argv[0]))
+
+def version():
+    print('{0}'.format(snmp2dot.__version__))
 
 def str2dict(data, oid, typ, val) :
     tokens = re.split(r'::|\]\[|\[|\]', oid)
@@ -45,8 +50,8 @@ def main():
     output = None
     
     for o, a in opts:
-        if o == "-v":
-            usage()
+        if o in ("-v", "--version"):
+            version()
             sys.exit(0)
         elif o in ("-h", "--help"):
             usage()

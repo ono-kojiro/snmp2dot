@@ -129,7 +129,7 @@ def main():
     output = None
 	
     for o, a in opts:
-        if o == "-v":
+        if o in ("-v", "--version"):
             usage()
             sys.exit(0)
         elif o in ("-h", "--help"):

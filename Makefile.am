@@ -10,8 +10,11 @@ package :
 prepare :
 	python3 -m pip install -r requirements.txt
 
+show :
+	unzip -t ./dist/$(PACKAGE)-$(VERSION)-py3-none-any.whl
+
 localinstall :
-	pip install ./dist/snmp2dot-0.0.1-py3-none-any.whl
+	pip install ./dist/$(PACKAGE)-$(VERSION)-py3-none-any.whl
 
 li : localinstall
 
