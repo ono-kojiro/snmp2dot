@@ -69,8 +69,6 @@ rcfiles="${rcfiles} ./common.shrc"
 rcfiles="${rcfiles} ./password.shrc"
 rcfiles="${rcfiles} ./${agent}.shrc"
 
-ipaddr=""
-
 for rcfile in ${rcfiles}; do
   if [ -e "${rcfile}" ]; then
     echo "INFO: read config from ${rcfile}" 1>&2
@@ -80,12 +78,23 @@ for rcfile in ${rcfiles}; do
   fi
 done
 
-if [ -z "${ipaddr}" ]; then
-  echo "ERROR: ipaddr variable not found in config files" 1>&2
+ret=0
+vars="snmpver seclevel secname"
+vars="$vars authprotocol authpassword"
+vars="$vars privprotocol privpassword"
+vars="$vars oid agent_ip manager"
+
+for var in ${vars}; do
+  val=`eval "echo \\$${var}"`
+  if [ -z "$val" ]; then
+    echo "ERROR: '${var}' is NOT defined" 1>&2
+    ret=`expr $ret + 1`
+  fi
+done
+
+if [ "$ret" -ne 0 ]; then
   exit 1
 fi
-
-agent_ip="${ipaddr}"
 
 flags=""
 flags="$flags -v $snmpver"
@@ -105,7 +114,13 @@ flags="$flags -M $mibdirs"
 flags="$flags -Pe"
 flags="$flags --hexOutputLength=0"
 
-cmd="snmpwalk ${flags} ${agent_ip} ${oid}"
+if [ ! -z "$manager" ]; then
+  precmd="ssh -t $manager"
+else
+  precmd=""
+fi
+
+cmd="$precmd snmpwalk ${flags} ${agent_ip} ${oid}"
 echo "# CMD: $cmd"
 $cmd
 
