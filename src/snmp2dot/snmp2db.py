@@ -99,6 +99,8 @@ def get_ip_address(data) :
         val = item['val']
         if re.search(r'169\.254\.', val) :
             continue
+        if re.search(r'127\.0\.0\.1', val) :
+            continue
         addrs.append(val)
 
     return addrs

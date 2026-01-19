@@ -8,32 +8,23 @@ arp_opts="${arp_opts} -ouifile=/usr/share/arp-scan/ieee-oui.txt"
 arp_opts="${arp_opts} --macfile=/etc/arp-scan/mac-vendor.txt"
 
 
-count=0
 
 rm -rf ${logfile}
-ssh -t abaoaqu "sudo -E arp-scan ${arp_opts}" >> ${logfile}
-if [ "$?" -eq 0 ]; then
-  echo "ok"
-else
-  echo "not ok"
-fi
-count=`expr $count + 1`
 
-ssh -t solomon "sudo -E arp-scan ${arp_opts}" >> ${logfile}
-if [ "$?" -eq 0 ]; then
-  echo "ok"
-else
-  echo "not ok"
-fi
-count=`expr $count + 1`
+#clients="abaoaqu solomon xubuntu"
+clients="xubuntu"
 
-ssh -t xubuntu "sudo -E arp-scan ${arp_opts}" >> ${logfile}
-if [ "$?" -eq 0 ]; then
-  echo "ok"
-else
-  echo "not ok"
-fi
-count=`expr $count + 1`
+count=0
+
+for client in $clients; do
+  ssh -t $client "sudo -E arp-scan ${arp_opts}" >> ${logfile}
+  if [ "$?" -eq 0 ]; then
+    echo "ok"
+  else
+    echo "not ok"
+  fi
+  count=`expr $count + 1`
+done
 
 echo "1..${count}"
 

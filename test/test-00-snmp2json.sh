@@ -9,7 +9,8 @@ top_dir="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 
 snmp2json="../src/snmp2dot/snmp2json.py"
 
-echo "1..3"
+count=0
+
 
 got=`${snmp2json} --version`
 exp='0.0.1'
@@ -18,6 +19,7 @@ if [ "$got" = "$exp" ]; then
 else
   echo "not ok - $got != $exp"
 fi
+count=`expr $count + 1`
 
 for agent in ${agents}; do
   logfile="${agent}.log"
@@ -30,5 +32,8 @@ for agent in ${agents}; do
   else
     echo "not ok"
   fi
+  count=`expr $count + 1`
 done
+
+echo "1..${count}"
 
