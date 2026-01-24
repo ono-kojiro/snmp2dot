@@ -3,6 +3,6 @@ nodes :
   192.168.1.248:
     minlen: 12
 
-  172.16.0.1:
-    minlen: 12
-    uplink: 2
+  172.16.1.1:
+    minlen: 8
+    uplink: 1

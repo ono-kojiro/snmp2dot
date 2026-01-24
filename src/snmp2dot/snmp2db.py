@@ -78,7 +78,7 @@ def get_scalar_value(data, oidname) :
 
     return res['val']
 
-def get_ip_address(data) :
+def get_agent_address(data) :
     addrs = []
 
     #oidname = 'IP-MIB::ipAdEntAddr'
@@ -104,6 +104,35 @@ def get_ip_address(data) :
         addrs.append(val)
 
     return addrs
+
+def get_ipNetToMediaPhysAddress(data):
+    records = {}
+
+    oidname = "RFC1213-MIB::ipNetToMediaPhysAddress"
+    mibname, objname = re.split(r'::', oidname)
+
+    res = data.get(mibname, None)
+    if res is None:
+        return records
+
+    res = res.get(objname, None)
+    if res is None:
+        return records
+
+    for ifid in res:
+        pprint(ifid)
+        for addr in res[ifid]:
+            item = res[ifid][addr]
+            pprint(item)
+            typ = item['typ']
+            mac = item['val']
+            mac = normalize_mac(mac)
+
+            if not ifid in records:
+                records[ifid] = []
+
+            records[ifid].append(mac)
+    return records
 
 def get_if2mac_table(data, oidname) :
     records = {}
@@ -323,7 +352,9 @@ def main():
         data = read_json(jsonfile)
 
         sysdescr = get_scalar_value(data, 'SNMPv2-MIB::sysDescr.0')
-        ips = get_ip_address(data)
+        ips = get_agent_address(data)
+        pprint(ips)
+
         mac = get_scalar_value(data, 'BRIDGE-MIB::dot1dBaseBridgeAddress.0')
         mac = normalize_mac(mac)
 
@@ -362,6 +393,22 @@ def main():
             insert_interface(conn, 'interfaces_table', item)
         
         if2macs = get_if2mac_table(data, 'BRIDGE-MIB::dot1dTpFdbPort')
+        for iface in ifaces :
+            if not iface in if2macs:
+                continue
+
+            macs = if2macs[iface]
+            for mac in macs:
+                item = {
+                    'agent': ip,
+                    'idx'  : iface,
+                    'mac'  : mac,
+                }
+                insert_macaddr(conn, 'macaddrs_table', item)
+
+        # for OPNsense
+        if2macs = get_ipNetToMediaPhysAddress(data)
+        pprint(if2macs)
         for iface in ifaces :
             if not iface in if2macs:
                 continue
