@@ -105,6 +105,34 @@ def get_agent_address(data) :
 
     return addrs
 
+def get_ifPhysAddress(data):
+    records = {}
+
+    oidname = "IF-MIB::ifPhysAddress"
+    mibname, objname = re.split(r'::', oidname)
+    
+    res = data.get(mibname, None)
+    if res is None:
+        return records
+
+    res = res.get(objname, None)
+    if res is None:
+        return records
+    
+    for ifid in res:
+        item = res[ifid]
+        typ = item['typ']
+        mac = item['val']
+        if mac == '' :
+            continue
+        mac = normalize_mac(mac)
+
+        if not ifid in records:
+            records[ifid] = []
+
+        records[ifid].append(mac)
+    return records
+
 def get_ipNetToMediaPhysAddress(data):
     records = {}
 
@@ -198,7 +226,7 @@ def normalize_mac(mac_str) :
         mac = re.sub(r'^:', '', mac)
         #print("DEBUG: {0} -> {1}".format(mac_str, mac))
     else :
-        print("ERROR: invalid mac address, {0}".format(mac_str))
+        print("ERROR: invalid mac address, '{0}'".format(mac_str))
         sys.exit(1)
 
     return mac
@@ -407,6 +435,10 @@ def main():
                 insert_macaddr(conn, 'macaddrs_table', item)
 
         # for OPNsense
+        # ex. agent_macs[ifid] = [ mac1, mac2, ...]
+        agent_macs = get_ifPhysAddress(data)
+
+        # for OPNsense
         if2macs = get_ipNetToMediaPhysAddress(data)
         pprint(if2macs)
         for iface in ifaces :
@@ -415,6 +447,10 @@ def main():
 
             macs = if2macs[iface]
             for mac in macs:
+                if iface in agent_macs:
+                    if mac in agent_macs[iface]:
+                        continue
+
                 item = {
                     'agent': ip,
                     'idx'  : iface,
