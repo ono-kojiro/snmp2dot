@@ -82,13 +82,24 @@ class Agent() :
         lines.append('    }')
         lines.append('')
 
+        color = 'none'
+
+        src = 'node_{0}_port{1}'.format(cluster, uport.pnum)
+        dst = 'node_{0}_image'.format(cluster)
+    
         line  = '    '
-        line += 'node_{0}_port{1} -> node_{0}_image [color=none];'.format(cluster, uport.pnum)
+        line += '{0} -> {1}'.format(src, dst)
+        line += ' [color={0}]'.format(color)
+        line += ';'
         lines.append(line)
+
+        lines.append('')
 
         for port in dports:
             line  = '    '
-            line += 'node_{0}_image -> node_{0}_port{1} [color=none];'.format(cluster, port.pnum)
+            src = 'node_{0}_image'.format(cluster)
+            dst = 'node_{0}_port{1}'.format(cluster, port.pnum)
+            line += '{0} -> {1} [color={2}];'.format(src, dst, color)
             lines.append(line)
         
         lines.append('')
