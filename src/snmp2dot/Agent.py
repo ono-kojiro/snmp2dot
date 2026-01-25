@@ -40,7 +40,7 @@ class Agent() :
         imagepath = self.imagepath
         
         if imagepath is None :
-            imagepath = 'icons/doc_jpg/small_hub.png'
+            imagepath = 'icons/doc_png/small_hub.png'
 
         lines = []
         cluster = re.sub(r'\.', '_', agent_ip)

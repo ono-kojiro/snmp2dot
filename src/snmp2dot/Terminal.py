@@ -31,7 +31,7 @@ class Terminal() :
             cluster = re.sub(r'\:', '_', dport.mac)
 
         if imagepath is None : 
-            imagepath='icons/doc_jpg/pc.png'
+            imagepath='icons/doc_png/pc.png'
 
         lines.append('subgraph cluster_{0} {{'.format(cluster))
         lines.append('    label = "{0}";'.format(label))

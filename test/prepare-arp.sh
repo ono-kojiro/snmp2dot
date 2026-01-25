@@ -12,7 +12,7 @@ arp_opts="${arp_opts} --macfile=/etc/arp-scan/mac-vendor.txt"
 rm -rf ${logfile}
 
 #clients="abaoaqu solomon xubuntu"
-clients="xubuntu bookworm noble jammy"
+clients="xubuntu bookworm noble jammy trixie"
 
 count=0
 

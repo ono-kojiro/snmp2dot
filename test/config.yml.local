@@ -5,5 +5,5 @@ nodes :
 
   172.16.1.1:
     draw_uplink_edge: true
-    minlen: 8
+    minlen: 4
     uplink: 1
