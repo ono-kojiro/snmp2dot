@@ -200,6 +200,8 @@ def main():
         for item in data['agents'] :
             agent_ip  = item['ip']
             agent_mac = item['mac']
+            agent_descr = item['sysdescr']
+            agent_objectid = item['sysobjectid']
             config = configs['nodes'][agent_ip]
 
             agent_uplink = config.get('uplink', None)
@@ -211,7 +213,9 @@ def main():
 
             agent = Agent(uport, dports, imagepath,
                           logger=logger,
-                          minlen=minlen
+                          minlen=minlen,
+                          sysdescr=agent_descr,
+                          sysobjectid=agent_objectid,
             )
             graph.add_agent(agent)
 

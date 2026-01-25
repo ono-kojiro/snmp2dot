@@ -241,7 +241,8 @@ def create_agents_table(conn, table):
     sql += 'id INTEGER PRIMARY KEY, '
     sql += 'ip TEXT, '
     sql += 'mac TEXT, '
-    sql += 'sysdescr TEXT '
+    sql += 'sysdescr TEXT, '
+    sql += 'sysobjectid TEXT '
     sql += ');'
 
     c.execute(sql)
@@ -325,11 +326,12 @@ def insert_macaddr(conn, table, item):
 
 def insert_agent(conn, table, item):
     c = conn.cursor()
-    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?);'.format(table)
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?);'.format(table)
     lst = [
         item['ip'],
         item['mac'],
         item['sysdescr'],
+        item['sysobjectid'],
     ]
     c.execute(sql, lst)
 
@@ -380,6 +382,9 @@ def main():
         data = read_json(jsonfile)
 
         sysdescr = get_scalar_value(data, 'SNMPv2-MIB::sysDescr.0')
+        sysobjectid = get_scalar_value(data, 'SNMPv2-MIB::sysObjectID.0')
+        print('DEBUG: sysobjectid is {0}'.format(sysobjectid))
+
         ips = get_agent_address(data)
         pprint(ips)
 
@@ -396,6 +401,7 @@ def main():
 
         item = {
             'sysdescr': sysdescr,
+            'sysobjectid': sysobjectid,
             'ip': ip,
             'mac': mac,
         }

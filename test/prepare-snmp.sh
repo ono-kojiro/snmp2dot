@@ -5,6 +5,7 @@
 
 oids=" \
   SNMPv2-MIB::sysDescr \
+  SNMPv2-MIB::sysObjectID \
   IF-MIB::ifDescr \
   IF-MIB::ifOutOctets \
   IF-MIB::ifInOctets \

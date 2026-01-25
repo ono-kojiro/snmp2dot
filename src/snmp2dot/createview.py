@@ -18,12 +18,14 @@ def read_json(filepath) :
 def create_agents_view(conn, view):
     c = conn.cursor()
 
+    print('DEBUG: create_agents_view called')
+
     sql = 'DROP VIEW IF EXISTS {0};'.format(view)
     c.execute(sql)
 
     sql = 'CREATE VIEW {0} AS '.format(view)
     sql += 'SELECT '
-    sql += '  DISTINCT ip, mac, sysdescr '
+    sql += '  DISTINCT ip, mac, sysdescr, sysobjectid '
     sql += 'FROM agents_table '
     sql += ';'
 

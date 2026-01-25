@@ -6,7 +6,13 @@ import copy
 from . import Port
 
 class Agent() :
-    def __init__(self, uport, dports, imagepath, logger=None, minlen=4) :
+    def __init__(self, uport, dports, imagepath, \
+            logger=None, \
+            minlen=4, \
+            sysdescr=None, \
+            sysobjectid=None, \
+            ) :
+
         self.ip  = uport.ip
         self.mac = uport.mac
         self.indent = 1
@@ -17,6 +23,8 @@ class Agent() :
 
         self.uport = uport
 
+        self.sysdescr = sysdescr
+        self.sysobjectid= sysobjectid
         self.logger = logger
    
     def get_uport(self) :
@@ -45,7 +53,10 @@ class Agent() :
         lines = []
         cluster = re.sub(r'\.', '_', agent_ip)
         lines.append('subgraph cluster_{0} {{'.format(cluster))
-        lines.append('    label = "{0}\\n{1}";'.format(agent_ip, agent_mac))
+        label = '{0}'.format(agent_ip)
+        label += '\n{0}'.format(agent_mac)
+        label += '\n{0}'.format(self.sysobjectid)
+        lines.append('    label = "{0}";'.format(label))
         lines.append('')
         lines.append('    node_{0}_image ['.format(cluster))
         lines.append('        shape=none')
