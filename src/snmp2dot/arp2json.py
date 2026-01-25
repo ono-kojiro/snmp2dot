@@ -81,11 +81,25 @@ def main():
                 break
 
             line = re.sub(r'\r?\n?$', '', line)
-            m = re.search(r'^(\S+)\s+(\S+)\s+(.+)', line)
+
+            ipv4p = r'(([0-9]{1,3}\.){3}[0-9]{1,3})'
+            macp  = r'(([0-9a-f]{2}:){5}[0-9a-f]{2})'
+            m = re.search(r'^' + ipv4p + r'\s+' + macp + r'\s+(.+)', line)
             if m :
                 ip = m.group(1)
-                mac = m.group(2)
-                vendor = m.group(3)
+                mac = m.group(3)
+                vendor = m.group(5)
+                if is_valid_ipv4(ip) :
+                    mac2ip[mac] = {
+                        'ip' : ip,
+                        'vendor' : vendor,
+                    }
+
+            m = re.search(r' MAC: ' + macp + r', IPv4: ' + ipv4p, line)
+            if m :
+                mac = m.group(1)
+                ip  = m.group(3)
+                vendor = '(arp-scan host)'
                 if is_valid_ipv4(ip) :
                     mac2ip[mac] = {
                         'ip' : ip,

@@ -3,6 +3,3 @@ agent_ip="172.16.1.1"
 secname="myuser"
 authprotocol="SHA"
 
-authpassword="xxxxxxxxxx"
-privpassword="xxxxxxxxxx"
-
