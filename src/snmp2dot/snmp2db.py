@@ -255,7 +255,7 @@ def create_interfaces_table(conn, table):
     sql = 'CREATE TABLE {0} ('.format(table)
     sql += 'id INTEGER PRIMARY KEY, '
     sql += 'agent TEXT, '
-    sql += 'idx TEXT, '
+    sql += 'idx INTEGER, '
     sql += 'typ TEXT, '
     sql += 'status TEXT, '
     sql += 'descr TEXT '
@@ -272,7 +272,7 @@ def create_macaddrs_table(conn, table):
     sql = 'CREATE TABLE {0} ('.format(table)
     sql += 'id INTEGER PRIMARY KEY, '
     sql += 'agent TEXT, '
-    sql += 'idx TEXT, '
+    sql += 'idx INTEGER, '
     sql += 'mac TEXT '
     sql += ');'
 

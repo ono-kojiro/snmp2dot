@@ -202,7 +202,7 @@ def main():
             agent_mac = item['mac']
             config = configs['nodes'][agent_ip]
 
-            agent_uplink = str(config.get('uplink', None))
+            agent_uplink = config.get('uplink', None)
             
             uport = Port(agent_mac, agent_ip, agent_uplink, Port.TYPE_AGENT)
             dports = get_dports(agent_ip, agent_uplink, conns)
@@ -258,7 +258,7 @@ def main():
 
             if src_ip in configs['nodes'] : 
                 config = configs['nodes'][src_ip]
-                uplink = str(config.get('uplink', None))
+                uplink = config.get('uplink', None)
 
                 if src_port == uplink :
                     is_src_port_uplink = True
@@ -271,7 +271,7 @@ def main():
             
             # if dst is Agent, use uplink port number
             if dst_ip in configs['nodes']:
-                uplink = str(configs['nodes'][dst_ip].get('uplink', None))
+                uplink = configs['nodes'][dst_ip].get('uplink', None)
                 dst_port = uplink
 
                 # add
@@ -319,7 +319,7 @@ def main():
                 edge.sport.ip = ip
                 if ip in configs['nodes']:
                     if 'uplink' in configs['nodes'][ip] :
-                        uplink = str(configs['nodes'][ip].get('uplink', None))
+                        uplink = configs['nodes'][ip].get('uplink', None)
                         edge.sport.pnum = uplink
 
             ip = edge.dport.ip
@@ -328,7 +328,7 @@ def main():
                 edge.dport.ip = ip
                 if ip in configs['nodes']:
                     if 'uplink' in configs['nodes'][ip] :
-                        uplink = str(configs['nodes'][ip].get('uplink', None))
+                        uplink = configs['nodes'][ip].get('uplink', None)
                         edge.dport.pnum = uplink
 
         graph.update_edges()
