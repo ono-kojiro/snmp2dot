@@ -1,9 +1,0 @@
----
-nodes :
-  192.168.1.248:
-    minlen: 12
-
-  172.16.1.1:
-    draw_uplink_edge: true
-    minlen: 4
-    uplink: 1

@@ -1,27 +1,11 @@
 ---
-nodes :
-  192.168.1.248:
-    uplink: "2"
-    draw_uplink_edge: true
-    alternatives:
-    - "192.168.11.248"
+#nodes :
+#  192.168.1.248:
+#    uplink: "2"
+#    draw_uplink_edge: true
+#    alternatives:
+#    - "192.168.11.248"
 
-  192.168.11.252:
-    #uplink: "6"
-    uplink: "1"
-
-images :
-  20:c6:eb:91:e2:0b : images/cf-sz5wdkpr.jpg
-  # https://panasonic.jp/pc/products/CF-SZ5WDKPR.html
-  00:4e:01:9d:0c:82 : images/optiplex_7060_micro.jpg
-  a8:13:74:94:ef:d9 : images/cf-rz4.jpg
-  f8:c6:50:a4:32:54 : images/cbs250-8t-d.jpg
-  f8:c6:50:a4:32:5a : images/cbs250-8t-d.jpg
-  e4:5f:01:fd:eb:34 : images/raspberrypi_4.jpg
-  90:96:f3:c8:dd:f0 : images/WSR-5400AX6S-MB.jpg
-  92:96:f3:c8:dd:f1 : images/WSR-5400AX6S-MB.jpg
-  92:96:f3:c8:dd:f2 : images/WSR-5400AX6S-MB.jpg
-  90:96:f3:c8:dd:f9 : images/WSR-5400AX6S-MB.jpg
-  98:41:5c:c0:48:e5 : images/switch1.jpg
-  bc:89:a6:2e:ad:ad : images/switch2.jpg
+#images :
+#  20:c6:eb:91:e2:0b : images/cf-sz5wdkpr.jpg
 
