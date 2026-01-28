@@ -65,6 +65,9 @@ def get_imagepath(configs, mac) :
     return imagepath
 
 def recursive_merge(dict1, dict2):
+    if dict2 is None :
+        return dict1
+
     for key, value in dict2.items():
         if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
             # If both values are dictionaries, recurse
@@ -99,6 +102,8 @@ def main():
     logfile = None
     loglevel = 'info'
 
+    configfiles = []
+
     for o, a in opts:
         if o in ("-v", "--version"):
             version()
@@ -107,7 +112,7 @@ def main():
             usage()
             sys.exit(0)
         elif o in ("-c", "--config"):
-            outputfile = a
+            configfiles.append(a)
         elif o in ("-l", "--logfile"):
             logfile = a
         elif o in ("-L", "--loglevel"):
@@ -158,23 +163,22 @@ def main():
     logger.info('create Graph')
     graph = Graph(logger=logger)
 
-    configs = {}
-    if configfile is None :
-        if os.path.exists('./config.yml.local'):
-            configfile = './config.yml.local'
-            configs = recursive_merge(configs, read_yaml(configfile))
-        pprint(configs)
+    if len(configfiles) == 0:
+        configfiles = [
+            './config.yml',
+            './config.yml.local',
+        ]
 
-        if os.path.exists('./config.yml'):
-            configfile = './config.yml'
-            configs = recursive_merge(configs, read_yaml(configfile))
-        pprint(configs)
+    configs = {
+        'nodes' : {},
+        'images' : {}
+    }
 
-        if configfile is None :
-            logger.error('ERROR: no config files')
-            sys.exit(1)
-    else :
-        configs = read_yaml(configfile)
+    for configfile in configfiles :
+        if os.path.exists(configfile):
+            tmp = read_yaml(configfile)
+            pprint(tmp)
+            configs = recursive_merge(configs, tmp)
 
     pprint(configs)
 
@@ -183,6 +187,10 @@ def main():
     all_ports = []
 
     alt_ips = {}
+    if not 'nodes' in configs:
+        print('ERROR: no nodes parameter in any configuration files')
+        sys.exit(1)
+
     for ip in configs['nodes'] :
         if 'alternatives' in configs['nodes'][ip]:
             for alt_ip in configs['nodes'][ip]['alternatives']:
