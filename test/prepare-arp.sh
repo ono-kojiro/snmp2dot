@@ -7,18 +7,15 @@ arp_opts="${arp_opts} --localnet --ignoredups"
 arp_opts="${arp_opts} -ouifile=/usr/share/arp-scan/ieee-oui.txt"
 arp_opts="${arp_opts} --macfile=/etc/arp-scan/mac-vendor.txt"
 
-
-
 rm -rf ${logfile}
 
-clients="localhost"
-#clients="abaoaqu solomon xubuntu"
-#clients="xubuntu bookworm noble jammy trixie"
+echo "INFO: read clients from clients.yml"
+clients=`cat clients.yml | yq -c -r ".clients.[]"`
 
 count=0
 
 for client in $clients; do
-  ssh -t $client "sudo -E arp-scan ${arp_opts}" >> ${logfile}
+  ssh -q -t $client "sudo -E arp-scan ${arp_opts}" >> ${logfile}
   if [ "$?" -eq 0 ]; then
     echo "ok"
   else
@@ -27,5 +24,6 @@ for client in $clients; do
   count=`expr $count + 1`
 done
 
+echo "INFO: output ${logfile}"
 echo "1..${count}"
 

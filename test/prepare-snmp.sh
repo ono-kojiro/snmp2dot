@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# load agents variable
-. ./agents.shrc
-
 oids=" \
   SNMPv2-MIB::sysDescr \
   SNMPv2-MIB::sysObjectID \
@@ -20,14 +17,23 @@ mibdirs="/usr/share/snmp/mibs"
 
 count="0"
 
+get_attr()
+{
+  agent="$1"
+  attr="$2"
+  res=`cat agents.yml \
+    | yq -c -r ".agents.[] | select(.name == \"$agent\") | .$attr"`
+  if [ "$res" = "null" ]; then
+    res=""
+  fi
+  echo "$res"
+}
+
+agents=`cat agents.yml | yq -c -r ".agents.[].name"`
+
 for agent in ${agents}; do
   rm -f ${agent}.log
   rm -f ${agent}.err
-
-  if [ ! -e "./${agent}.shrc" ]; then
-    echo "ERROR: no ${agent}.shrc file for agent ${agent}" 1>&2
-    continue
-  fi
 
   for oid in ${oids}; do
     opts=""

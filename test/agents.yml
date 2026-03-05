@@ -1,0 +1,13 @@
+---
+agents:
+
+#- name: switch1
+#  ip: "192.168.1.248"
+#  authprotocol: "SHA-256"
+
+- name: switch3
+  manager: "localhost"
+  ip: "192.168.1.251"
+  secname: "myuser"
+  authprotocol: "SHA256"
+

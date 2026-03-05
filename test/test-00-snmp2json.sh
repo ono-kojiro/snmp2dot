@@ -3,7 +3,7 @@
 top_dir="$( cd "$( dirname "$0" )" >/dev/null 2>&1 && pwd )"
 
 # load agents variable
-. ./agents.shrc
+agents=`cat agents.yml | yq -c -r ".agents.[].name"`
 
 . ./pythonpath.shrc
 
