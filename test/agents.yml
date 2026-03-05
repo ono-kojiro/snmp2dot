@@ -5,9 +5,20 @@ agents:
 #  ip: "192.168.1.248"
 #  authprotocol: "SHA-256"
 
+#- name: switch2
+#  manager: "localhost"
+#  ip: "192.168.11.252"
+#  authprotocol: "SHA"
+
 - name: switch3
   manager: "localhost"
   ip: "192.168.1.251"
   secname: "myuser"
   authprotocol: "SHA256"
+
+- name: opnsense
+  manager: "xubuntu"
+  ip: "172.16.1.1"
+  secname: "myuser"
+  authprotocol: "SHA"
 

@@ -1,0 +1,11 @@
+---
+clients:
+#- abaoaqu
+#- solomon
+#- xubuntu
+#- bookworm
+#- noble
+#- jammy
+#- trixie
+- localhost
+
