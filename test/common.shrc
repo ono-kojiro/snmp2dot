@@ -1,5 +1,5 @@
 snmpver="3"
 seclevel="authPriv"
-authprotocol="SHA-256"
-privprotocol="AES"
+authprotocol="SHA256"
+privprotocol="AES128"
 

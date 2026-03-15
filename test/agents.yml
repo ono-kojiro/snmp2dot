@@ -1,13 +1,32 @@
 ---
-agents:
+oids:
+- SNMPv2-MIB::sysDescr 
+- SNMPv2-MIB::sysObjectID 
+- IF-MIB::ifDescr
+- IF-MIB::ifOutOctets
+- IF-MIB::ifInOctets
+- IF-MIB::ifTable
+- IF-MIB::interfaces
+- IP-MIB::ip
+- BRIDGE-MIB::dot1dBridge
 
-#- name: switch1
-#  ip: "192.168.1.248"
-#  authprotocol: "SHA-256"
+mibs: ALL
+mibdirs: /usr/share/snmp/mibs
 
-- name: switch3
-  manager: "localhost"
-  ip: "192.168.1.251"
-  secname: "myuser"
+default:
+  snmpver: 3
+  seclevel: "authPriv"
   authprotocol: "SHA256"
+  privprotocol: "AES128"
+
+agents:
+  switch1:
+    ip: "192.168.1.248"
+    authprotocol: "SHA-256"
+
+  switch3:
+    manager: "localhost"
+    ip: "192.168.1.251"
+    secname: "myuser"
+    authprotocol: "SHA256"
 

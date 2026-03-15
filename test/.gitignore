@@ -8,4 +8,5 @@ images/
 *.db
 *.sql
 password.shrc
+password.yml
 
