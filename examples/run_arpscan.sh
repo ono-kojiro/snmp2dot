@@ -17,7 +17,7 @@ for target in $targets; do
   remote=`echo ${target} | sed 's/:.*//'`
   iface=`echo ${target} | sed 's/.*://'`
   echo "DEBUG: run arp-scan in $remote at interface $iface" | tee -a ${logfile}
-  ssh -t $remote "arp-scan ${arp_opts} --interface $iface" | tee -a ${logfile}
+  ssh -t $remote "/usr/sbin/arp-scan ${arp_opts} --interface $iface" | tee -a ${logfile}
   if [ "$?" -eq 0 ]; then
     echo "ok"
   else

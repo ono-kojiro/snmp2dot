@@ -8,7 +8,8 @@ nodes :
     uplink: "1"
     draw_uplink_edge: true
     alternatives:
-    - "192.168.11.248"
+    - "172.16.11.1"
+    - "52:54:00:e7:f2:11"
 
   192.168.122.20:
     #uplink: "6"

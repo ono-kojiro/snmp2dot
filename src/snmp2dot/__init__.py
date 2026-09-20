@@ -13,7 +13,7 @@ from .snmp2json import *
 from .snmp2db   import *
 
 from .db2json   import *
-from .json2dot  import *
+from .yml2dot  import *
 
 
 
