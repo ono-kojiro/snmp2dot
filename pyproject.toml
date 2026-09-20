@@ -23,7 +23,12 @@ arp2json = "snmp2dot.arp2json:main"
 arp2db   = "snmp2dot.arp2db:main"
 
 db2json  = "snmp2dot.db2json:main"
+db2yml   = "snmp2dot.db2yml:main"
 json2dot = "snmp2dot.json2dot:main"
+
+yml2dot = "snmp2dot.yml2dot:main"
+
+createview = "snmp2dot.createview:main"
 
 [tool.setuptools.package-data]
 mypackage = [ "bin/hoge.sh" ]
