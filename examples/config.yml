@@ -1,7 +1,11 @@
 ---
 nodes :
+  192.168.1.252:
+    uplink: "8"
+    draw_uplink_edge: true
+
   192.168.122.10:
-    uplink: "2"
+    uplink: "1"
     draw_uplink_edge: true
     alternatives:
     - "192.168.11.248"

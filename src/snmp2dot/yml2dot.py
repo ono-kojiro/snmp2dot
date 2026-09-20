@@ -20,6 +20,7 @@ from snmp2dot.Agent    import Agent
 from snmp2dot.Port     import Port
 
 import logging
+logger = logging.getLogger(__name__)
 
 import snmp2dot
 
@@ -100,7 +101,8 @@ def main():
     output = None
     configfile = None
     logfile = None
-    loglevel = 'info'
+    #loglevel = 'info'
+    loglevel = 'debug'
 
     configfiles = []
 
@@ -155,12 +157,10 @@ def main():
         ],
     )
 
-    logger = logging.getLogger(sys.argv[0].split('/')[-1])
-
     if ret != 0:
         sys.exit(1)
 	
-    logger.info('create Graph')
+    logger.debug('create Graph')
     graph = Graph(logger=logger)
 
     if len(configfiles) == 0:
@@ -207,6 +207,8 @@ def main():
 
         # agents
         for item in data['agents'] :
+            logging.debug(item)
+
             agent_ip  = item['ip']
             agent_mac = item['mac']
             agent_descr = item['sysdescr']

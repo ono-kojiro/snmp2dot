@@ -12,7 +12,11 @@ import re
 import sqlite3
 from pprint import pprint
 
+
 import snmp2dot
+
+import logging
+logger = logging.getLogger(__name__)
 
 def version():
     print('{0}'.format(snmp2dot.__version__))
@@ -94,6 +98,8 @@ def get_agent_address(data) :
     oidname = 'RFC1213-MIB::ipAdEntAddr'
     val = None
     mibname, objname = re.split(r'::', oidname)
+
+    logger.info("mibname for agent is {0}".format(mibname))
 
     res = data.get(mibname, None)
     if res is None:
@@ -386,6 +392,8 @@ def main():
     if ret != 0:
         sys.exit(1)
 
+    logging.basicConfig(level=logging.DEBUG)
+
     pprint(config_yml, stream=sys.stderr)
     config = read_yaml(config_yml)
     pprint(config, stream=sys.stderr)
@@ -404,7 +412,7 @@ def main():
         print('DEBUG: sysobjectid is {0}'.format(sysobjectid))
 
         ips = get_agent_address(data)
-        pprint(ips)
+        logging.debug('found {0}'.format(ips))
 
         mac = get_scalar_value(data, 'BRIDGE-MIB::dot1dBaseBridgeAddress.0')
         mac = normalize_mac(mac)
@@ -422,6 +430,8 @@ def main():
             if not ip :
                 print('ERROR: no IP found for agents')
                 sys.exit(1)
+        else :
+            ip = ips[0]
             
         item = {
             'sysdescr': sysdescr,
