@@ -1,4 +1,4 @@
 build
 pyyaml>=6.0.3
 pytest>=9.0.2
-
+setuptools>=77.0.0

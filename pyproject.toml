@@ -6,7 +6,9 @@ build-backend = "setuptools.build_meta"
 name = "snmp2dot"
 version = "0.0.1"
 
-license = { file = "LICENSE" }
+license-files = [
+  "LICENSE"
+]
 
 dependencies = [
   "pyyaml",
