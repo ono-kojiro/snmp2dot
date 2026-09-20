@@ -177,10 +177,10 @@ def main():
     for configfile in configfiles :
         if os.path.exists(configfile):
             tmp = read_yaml(configfile)
-            pprint(tmp)
+            pprint(tmp, stream=sys.stderr)
             configs = recursive_merge(configs, tmp)
 
-    pprint(configs)
+    pprint(configs, stream=sys.stderr)
 
     data = {}
 
@@ -211,6 +211,10 @@ def main():
             agent_mac = item['mac']
             agent_descr = item['sysdescr']
             agent_objectid = item['sysobjectid']
+            if not agent_ip in configs['nodes']:
+                print("ERROR: no 'ip' in configfiles".format(agent_ip), file=sys.stderr)
+                sys.exit(1)
+
             config = configs['nodes'][agent_ip]
 
             agent_uplink = config.get('uplink', None)
@@ -255,7 +259,8 @@ def main():
                     break
 
             if target is None :
-                print('WARN: no port found, {0}, {1}'.format(src_ip, src_port))
+                msg = 'WARN: no port found, {0}, {1}'.format(src_ip, src_port)
+                print(msg, file=sys.stderr)
                 sys.exit(1)
 
             # add

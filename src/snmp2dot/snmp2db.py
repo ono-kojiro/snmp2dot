@@ -4,6 +4,8 @@ import sys
 
 import getopt
 import json
+import yaml
+import copy
 
 import re
 
@@ -22,6 +24,13 @@ def read_json(filepath) :
     with open(filepath, mode='r', encoding='utf-8') as fp :
         data = json.loads(fp.read())
         return data
+
+def read_yaml(filepath):
+    fp = open(filepath, mode="r", encoding="utf-8")
+    tmp = yaml.load(fp, Loader=yaml.loader.SafeLoader)
+    data = copy.deepcopy(tmp)
+    fp.close()
+    return data
 
 def get_mac2addrs_table(data) :
     mac2addrs = {}
@@ -148,7 +157,7 @@ def get_ipNetToMediaPhysAddress(data):
         return records
 
     for ifid in res:
-        pprint(ifid)
+        pprint(ifid, stream=sys.stderr)
         for addr in res[ifid]:
             item = res[ifid][addr]
             pprint(item)
@@ -339,11 +348,12 @@ def main():
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "hvo:",
+            "hvo:c:",
             [
                 "help",
                 "version",
-                "output="
+                "output=",
+                "config=",
             ]
         )
     except getopt.GetoptError as err:
@@ -351,6 +361,7 @@ def main():
         sys.exit(2)
     
     output = None
+    config_yml = None
 	
     for o, a in opts:
         if o in ("-v", "--version"):
@@ -361,6 +372,8 @@ def main():
             sys.exit(0)
         elif o in ("-o", "--output"):
             output = a
+        elif o in ("-c", "--config"):
+            config_yml = a
         else:
             assert False, "unknown option"
 	
@@ -372,6 +385,11 @@ def main():
 	
     if ret != 0:
         sys.exit(1)
+
+    pprint(config_yml, stream=sys.stderr)
+    config = read_yaml(config_yml)
+    pprint(config, stream=sys.stderr)
+    nodes = config['nodes']
 
     conn = sqlite3.connect(output)
     create_agents_table(conn, 'agents_table')
@@ -391,14 +409,20 @@ def main():
         mac = get_scalar_value(data, 'BRIDGE-MIB::dot1dBaseBridgeAddress.0')
         mac = normalize_mac(mac)
 
+        ip = None
         if len(ips) != 1 :
             print('WARNING: some IP address found', file=sys.stderr)
             print('WARNING: ips {0}'.format(ips))
-            print('WARNING: use only {0}'.format(ips[0]))
-            #sys.exit(1)
-            
-        ip = ips[0]
 
+            for ip in ips :
+                if ip in nodes :
+                    print('INFO: found agent IP, {0}'.format(ip))
+                    break
+
+            if not ip :
+                print('ERROR: no IP found for agents')
+                sys.exit(1)
+            
         item = {
             'sysdescr': sysdescr,
             'sysobjectid': sysobjectid,
