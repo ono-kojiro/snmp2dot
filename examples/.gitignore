@@ -2,4 +2,8 @@
 *.snmp
 *.arp
 *.json
+*.db
+*.sql
+*.dot
+*.pdf
 

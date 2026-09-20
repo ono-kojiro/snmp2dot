@@ -45,11 +45,18 @@ def read_yaml(filepath):
 
 def get_dports(agent_ip, uplink, conns) :
     dports = []
+    
+    logger.debug("in get_dports")
+
     for conn in conns :
         if conn['src_ip'] != agent_ip :
             continue
         port = conn['src_port']
-        if port == uplink :
+
+        logger.debug("  port: {0}, uplink: {1}".format(port, uplink))
+
+        if int(port) == int(uplink) :
+            logger.debug("  skip port {0}".format(port))
             continue
 
         # get all pnum from dports and create list
@@ -174,11 +181,15 @@ def main():
         'images' : {}
     }
 
+    print('DEBUG: configfiles , {0}'.format(configfiles), file=sys.stderr)
+
     for configfile in configfiles :
         if os.path.exists(configfile):
             tmp = read_yaml(configfile)
             pprint(tmp, stream=sys.stderr)
             configs = recursive_merge(configs, tmp)
+        else :
+            logger.warning("configfile '{0}' not found".format(configfile))
 
     pprint(configs, stream=sys.stderr)
 
@@ -206,6 +217,8 @@ def main():
         conns = a2a + a2t
 
         # agents
+        logger.debug("begin agents loop ...")
+
         for item in data['agents'] :
             logging.debug(item)
 
@@ -214,13 +227,16 @@ def main():
             agent_descr = item['sysdescr']
             agent_objectid = item['sysobjectid']
             if not agent_ip in configs['nodes']:
-                print("ERROR: no 'ip' in configfiles".format(agent_ip), file=sys.stderr)
+                print("ERROR: no 'ip' for {0} in configfiles".format(agent_ip), file=sys.stderr)
+                print("DUMP: configs['nodes']", file=sys.stderr)
+                pprint(configs['nodes'], stream=sys.stderr)
                 sys.exit(1)
 
             config = configs['nodes'][agent_ip]
 
             agent_uplink = config.get('uplink', None)
-            
+            logging.debug('{0} : is_uplink {1}'.format(agent_ip, agent_uplink))
+
             uport = Port(agent_mac, agent_ip, agent_uplink, Port.TYPE_AGENT)
             dports = get_dports(agent_ip, agent_uplink, conns)
             imagepath = get_imagepath(configs, agent_mac)
@@ -233,12 +249,22 @@ def main():
                           sysobjectid=agent_objectid,
             )
             graph.add_agent(agent)
+        
+        logger.debug("end agents loop ...")
+        logger.debug("")
 
         all_ports.extend(graph.get_agent_uports())
         all_ports.extend(graph.get_agent_dports())
         
         # edges
+        logger.debug("")
+        logger.debug("check edges ...")
+        logger.debug("conns ...")
+        #logger.debug(conns)
+
         for conn in conns :
+            logger.debug(conn)
+
             src_ip   = conn['src_ip']
             src_port = conn['src_port']
             dst_mac   = conn['dst_mac']
@@ -261,8 +287,8 @@ def main():
                     break
 
             if target is None :
-                msg = 'WARN: no port found, {0}, {1}'.format(src_ip, src_port)
-                print(msg, file=sys.stderr)
+                msg = 'no port found, ip:{0}, port:{1}'.format(src_ip, src_port)
+                logger.error(msg)
                 sys.exit(1)
 
             # add

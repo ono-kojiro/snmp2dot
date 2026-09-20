@@ -1,19 +1,28 @@
 ---
 nodes :
   192.168.1.252:
-    uplink: "8"
+    uplink: 8
     draw_uplink_edge: true
 
-  192.168.122.10:
-    uplink: "1"
-    draw_uplink_edge: true
+  192.168.1.72:
+    uplink: 4
     alternatives:
+    - "192.168.122.1"
     - "172.16.11.1"
-    - "52:54:00:e7:f2:11"
+    - "172.16.12.1"
+    - "172.16.13.1"
+
+  192.168.122.10:
+    uplink: 2
+    draw_uplink_edge: true
+    #alternatives:
+    #- "172.16.11.1"
+    #- "172.16.12.1"
+    #- "172.16.13.1"
 
   192.168.122.20:
     #uplink: "6"
-    uplink: "1"
+    uplink: 2
 
 images :
   20:c6:eb:91:e2:0b : images/cf-sz5wdkpr.jpg

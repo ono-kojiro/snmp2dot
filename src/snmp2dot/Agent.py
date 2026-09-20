@@ -68,7 +68,10 @@ class Agent() :
             
        
         lines.append('')
-        # uplink port and downlink port
+
+        line = '    // uplink port and downlink port'
+        lines.append(line)
+
         for port in [ self.uport ] + self.dports:
             line  = '    '
             line += 'node_{0}_port{1} ['.format(cluster, port.pnum)
@@ -82,6 +85,7 @@ class Agent() :
 
         lines.append('')
         lines.append('    {')
+        lines.append('        // downlink port only')
         lines.append('        rank = same;')
 
         # downlink port only
@@ -93,7 +97,11 @@ class Agent() :
         lines.append('    }')
         lines.append('')
 
-        color = 'none'
+        #color = 'none'
+        color = 'red'
+        
+        line  = '    // uplink port -> node_image'
+        lines.append(line)
 
         src = 'node_{0}_port{1}'.format(cluster, uport.pnum)
         dst = 'node_{0}_image'.format(cluster)
@@ -106,6 +114,10 @@ class Agent() :
 
         lines.append('')
 
+
+        color = 'blue'
+        line  = '    // node_image -> downlink port'
+        lines.append(line)
         for port in dports:
             line  = '    '
             src = 'node_{0}_image'.format(cluster)
