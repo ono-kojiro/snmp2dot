@@ -40,6 +40,7 @@ def create_connections_view(conn, view):
     sql = 'CREATE VIEW {0} AS '.format(view)
     sql += 'SELECT '
     #sql += '  interfaces_table.agent AS agent_ip, '
+    sql += '  interfaces_table.sysname  AS sysname, '
     sql += '  agents_table.ip  AS src_ip, '
     sql += '  agents_table.mac AS src_mac, '
     sql += '  interfaces_table.idx AS src_port, '
@@ -51,7 +52,7 @@ def create_connections_view(conn, view):
     sql += 'LEFT OUTER JOIN arp_table '
     sql += '  ON macaddrs_table.mac = arp_table.mac '
     sql += 'LEFT OUTER JOIN agents_table '
-    sql += '  ON interfaces_table.agent = agents_table.ip '
+    sql += '  ON interfaces_table.sysname = agents_table.sysname '
     sql += 'WHERE '
     sql += '  status = "up(1)" '
     sql += '  AND macaddrs_table.mac != "" '
@@ -68,6 +69,7 @@ def create_a2a_view(conn, view):
 
     sql = 'CREATE VIEW {0} AS '.format(view)
     sql += 'SELECT '
+    sql += '  macaddrs_table.sysname AS sysname, '
     sql += '  macaddrs_table.agent AS src_ip, '
     sql += '  macaddrs_table.idx   AS src_port, '
     sql += '  macaddrs_table.mac   AS dst_mac, '
@@ -78,7 +80,7 @@ def create_a2a_view(conn, view):
     sql += '  dst_table.sysdescr   AS dst_descr '
     sql += 'FROM macaddrs_table '
     sql += 'LEFT OUTER JOIN agents_table AS src_table '
-    sql += '  ON macaddrs_table.agent = src_table.ip '
+    sql += '  ON macaddrs_table.sysname = src_table.sysname '
     sql += 'LEFT OUTER JOIN agents_table AS dst_table '
     sql += '  ON macaddrs_table.mac = dst_table.mac '
     sql += 'LEFT OUTER JOIN arp_table '
@@ -103,7 +105,7 @@ def create_a2t_view(conn, view):
     sql += '  arp_table.ip         AS dst_ip '
     sql += 'FROM macaddrs_table '
     sql += 'LEFT OUTER JOIN a2a_view '
-    sql += '  ON  macaddrs_table.agent = a2a_view.src_ip '
+    sql += '  ON  macaddrs_table.sysname = a2a_view.sysname '
     sql += '  AND macaddrs_table.idx   = a2a_view.src_port '
     sql += 'LEFT OUTER JOIN arp_table '
     sql += '  ON macaddrs_table.mac = arp_table.mac '
