@@ -6,4 +6,5 @@
 *.sql
 *.dot
 *.pdf
+local.mk
 

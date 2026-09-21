@@ -1,30 +1,18 @@
-AGENTS = 192.168.1.252 192.168.122.10 192.168.122.20 192.168.1.72
-#AGENTS = 192.168.122.10 192.168.122.20
+TOP_DIR = .
 
-SNMPLOG_SNMP = $(AGENTS:=.snmp)
-SNMPLOG_JSON = $(SNMPLOG_SNMP:.snmp=.json)
-SNMPLOG_DOT  = $(SNMPLOG_JSON:.json=.dot)
-
-ARPLOG_ARP   = arpscan.arp
-ARPLOG_JSON  = $(ARPLOG_ARP:.arp=.json)
-
-DATABASE_DB   = database.db
-DATABASE_SQL  = database.sql
-
-GRAPH_YAML    = graph.yml
-GRAPH_DOT     = $(GRAPH_YAML:.yml=.dot)
-GRAPH_PDF     = $(GRAPH_DOT:.dot=.pdf)
+-include $(TOP_DIR)/local.mk
+include $(TOP_DIR)/variables.mk
 
 all : json db yml dot pdf
+
+prepare :
+	sudo apt -y install snmp sqlite3
 
 debug :
 	echo $(GRAPH_YAML)
 
-snmp : $(SNMPLOG_SNMP)
-
-%.snmp :
-	snmpwalk ${@:.snmp=} > $@
-
+snmp :
+	$(MAKE) -C snmp
 
 json : $(SNMPLOG_JSON) $(ARPLOG_JSON)
 
@@ -77,6 +65,5 @@ mclean :
 	rm -f $(ARPLOG_ARP)
 
 .PHONY : \
-	all clean test \
-	$(AGENTS)
+	all clean test snmp
 
