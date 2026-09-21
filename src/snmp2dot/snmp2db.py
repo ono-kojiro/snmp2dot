@@ -254,6 +254,7 @@ def create_agents_table(conn, table):
 
     sql = 'CREATE TABLE {0} ('.format(table)
     sql += 'id INTEGER PRIMARY KEY, '
+    sql += 'sysname TEXT, '
     sql += 'ip TEXT, '
     sql += 'mac TEXT, '
     sql += 'sysdescr TEXT, '
@@ -270,6 +271,7 @@ def create_interfaces_table(conn, table):
 
     sql = 'CREATE TABLE {0} ('.format(table)
     sql += 'id INTEGER PRIMARY KEY, '
+    sql += 'sysname TEXT, '
     sql += 'agent TEXT, '
     sql += 'idx INTEGER, '
     sql += 'typ TEXT, '
@@ -287,6 +289,7 @@ def create_macaddrs_table(conn, table):
 
     sql = 'CREATE TABLE {0} ('.format(table)
     sql += 'id INTEGER PRIMARY KEY, '
+    sql += 'sysname TEXT, '
     sql += 'agent TEXT, '
     sql += 'idx INTEGER, '
     sql += 'mac TEXT '
@@ -316,8 +319,9 @@ def create_macaddrs_view(conn, view):
 
 def insert_interface(conn, table, item):
     c = conn.cursor()
-    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?);'.format(table)
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?, ?);'.format(table)
     lst = [
+        item['sysname'],
         item['agent'],
         item['idx'],
         item['typ'],
@@ -329,8 +333,10 @@ def insert_interface(conn, table, item):
 
 def insert_macaddr(conn, table, item):
     c = conn.cursor()
-    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?);'.format(table)
+    pprint(item)
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?);'.format(table)
     lst = [
+        item['sysname'],
         item['agent'],
         item['idx'],
         item['mac'],
@@ -341,8 +347,9 @@ def insert_macaddr(conn, table, item):
 
 def insert_agent(conn, table, item):
     c = conn.cursor()
-    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?);'.format(table)
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?);'.format(table)
     lst = [
+        item['sysname'],
         item['ip'],
         item['mac'],
         item['sysdescr'],
@@ -407,6 +414,7 @@ def main():
     for jsonfile in args:
         data = read_json(jsonfile)
 
+        sysname  = get_scalar_value(data, 'SNMPv2-MIB::sysName.0')
         sysdescr = get_scalar_value(data, 'SNMPv2-MIB::sysDescr.0')
         sysobjectid = get_scalar_value(data, 'SNMPv2-MIB::sysObjectID.0')
         print('DEBUG: sysobjectid is {0}'.format(sysobjectid))
@@ -434,6 +442,7 @@ def main():
             ip = ips[0]
             
         item = {
+            'sysname': sysname,
             'sysdescr': sysdescr,
             'sysobjectid': sysobjectid,
             'ip': ip,
@@ -452,6 +461,7 @@ def main():
             typ    = if2type[iface]
 
             item = {
+                'sysname': sysname,
                 'agent': ip,
                 'idx': iface,
                 'typ' : typ,
@@ -468,6 +478,7 @@ def main():
             macs = if2macs[iface]
             for mac in macs:
                 item = {
+                    'sysname': sysname,
                     'agent': ip,
                     'idx'  : iface,
                     'mac'  : mac,
@@ -492,6 +503,7 @@ def main():
                         continue
 
                 item = {
+                    'sysname' : sysname,
                     'agent': ip,
                     'idx'  : iface,
                     'mac'  : mac,
