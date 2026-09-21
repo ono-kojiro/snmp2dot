@@ -9,7 +9,7 @@ arp_opts="${arp_opts} --macfile=/etc/arp-scan/mac-vendor.txt"
 
 rm -rf ${logfile}
 
-targets="luna2:macvlan0 abaoaqu:macvlan0 trixie:enp1s0"
+targets="luna2:macvlan0 luna2:docker0 luna2:virbr0 abaoaqu:macvlan0 trixie:enp1s0"
 
 count=0
 
