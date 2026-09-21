@@ -1,30 +1,16 @@
-AGENTS = 192.168.1.252 192.168.122.10 192.168.122.20 192.168.1.72
-#AGENTS = 192.168.122.10 192.168.122.20
+TOP_DIR = .
 
-SNMPLOG_SNMP = $(AGENTS:=.snmp)
-SNMPLOG_JSON = $(SNMPLOG_SNMP:.snmp=.json)
-SNMPLOG_DOT  = $(SNMPLOG_JSON:.json=.dot)
+-include local.mk
+include  variables.mk
 
-ARPLOG_ARP   = arpscan.arp
-ARPLOG_JSON  = $(ARPLOG_ARP:.arp=.json)
-
-DATABASE_DB   = database.db
-DATABASE_SQL  = database.sql
-
-GRAPH_YAML    = graph.yml
-GRAPH_DOT     = $(GRAPH_YAML:.yml=.dot)
-GRAPH_PDF     = $(GRAPH_DOT:.dot=.pdf)
-
-all : json db yml dot pdf
+#all : snmp arp db yml dot pdf
+all : snmp arp db yml dot pdf
 
 debug :
 	echo $(GRAPH_YAML)
 
-snmp : $(SNMPLOG_SNMP)
-
-%.snmp :
-	snmpwalk ${@:.snmp=} > $@
-
+snmp :
+	$(MAKE) -C snmp
 
 json : $(SNMPLOG_JSON) $(ARPLOG_JSON)
 
@@ -36,10 +22,10 @@ json : $(SNMPLOG_JSON) $(ARPLOG_JSON)
 
 db : $(DATABASE_DB)
 
-$(DATABASE_DB) : $(SNMPLOG_JSON) $(ARPLOG_JSON)
+$(DATABASE_DB) : $(SNMPWALK_SQL) $(ARPSCAN_SQL)
 	rm -f $@
-	snmp2db -c config.yml -o $@ $(SNMPLOG_JSON)
-	arp2db  -o $@ $(ARPLOG_JSON)
+	sqlite3 $@ < $(SNMPWALK_SQL)
+	sqlite3 $@ < $(ARPSCAN_SQL)
 	createview -o $@
 	sqlite3 $@ ".dump" > $(DATABASE_SQL)
 
@@ -55,7 +41,7 @@ dot : $(GRAPH_DOT)
 	yml2dot --config config.yml -o $@ $<
 
 arp :
-	sh run_arpscan.sh
+	$(MAKE) -C arp
 
 pdf : $(GRAPH_PDF)
 
@@ -63,20 +49,18 @@ $(GRAPH_PDF) : $(GRAPH_DOT)
 	dot -Tpdf -o $@ $<
 
 clean :
-	rm -f $(SNMPLOG_JSON)
-	rm -f $(ARPLOG_JSON)
+	$(MAKE) -C snmp clean
+	$(MAKE) -C arp  clean
+
+mclean :
+	$(MAKE) clean
+	$(MAKE) -C snmp mclean
+	$(MAKE) -C arp  mclean
 	rm -f $(DATABASE_DB)
 	rm -f $(DATABASE_SQL)
 	rm -f $(GRAPH_YAML)
 	rm -f $(GRAPH_DOT)
-	rm -f $(GRAPH_PDF)
-	
-mclean :
-	$(MAKE) clean
-	rm -f $(SNMPLOG_SNMP)
-	rm -f $(ARPLOG_ARP)
-
 .PHONY : \
-	all clean test \
+	all clean test snmp arp \
 	$(AGENTS)
 

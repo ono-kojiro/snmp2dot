@@ -436,7 +436,7 @@ def main():
                 break
         
         if not main_ip :
-            print('ERROR: no main IP found for agents')
+            print('ERROR: no main IP found for agents, {0}'.format(jsonfile))
             sys.exit(1)
 
         item = {
