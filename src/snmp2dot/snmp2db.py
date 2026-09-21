@@ -276,7 +276,8 @@ def create_interfaces_table(conn, table):
     sql += 'idx INTEGER, '
     sql += 'typ TEXT, '
     sql += 'status TEXT, '
-    sql += 'descr TEXT '
+    sql += 'descr TEXT, '
+    sql += 'phys TEXT '
     sql += ');'
 
     c.execute(sql)
@@ -319,7 +320,7 @@ def create_macaddrs_view(conn, view):
 
 def insert_interface(conn, table, item):
     c = conn.cursor()
-    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?, ?);'.format(table)
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?, ?, ? );'.format(table)
     lst = [
         item['sysname'],
         item['agent'],
@@ -327,6 +328,7 @@ def insert_interface(conn, table, item):
         item['typ'],
         item['status'],
         item['descr'],
+        item['phys'],
     ]
 
     c.execute(sql, lst)
@@ -455,10 +457,16 @@ def main():
         if2type   = get_dict_values(data, 'IF-MIB::ifType')
         ifaces = get_dict_values(data, 'IF-MIB::ifIndex')
         
+        if2phys = get_dict_values(data, 'IF-MIB::ifPhysAddress')
+        
         for iface in ifaces :
             status = if2status[iface]
             descr  = if2descr[iface]
             typ    = if2type[iface]
+            phys = if2phys[iface]
+       
+            if phys != '' :
+                phys = normalize_mac(phys)
 
             item = {
                 'sysname': sysname,
@@ -467,6 +475,7 @@ def main():
                 'typ' : typ,
                 'status': status,
                 'descr': descr,
+                'phys' : phys,
             }
             insert_interface(conn, 'interfaces_table', item)
         
