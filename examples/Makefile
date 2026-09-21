@@ -46,7 +46,7 @@ $(DATABASE_DB) : $(SNMPLOG_JSON) $(ARPLOG_JSON)
 yml : $(GRAPH_YAML)
 
 $(GRAPH_YAML) : $(DATABASE_DB)
-	db2yml -o $@ $(DATABASE_DB)
+	db2yml --config config.yml -o $@ $(DATABASE_DB)
 
 dot : $(GRAPH_DOT)
 

@@ -37,8 +37,16 @@ def read_json(filepath) :
 
 def read_yaml(filepath):
     fp = open(filepath, mode="r", encoding="utf-8")
-    tmp = yaml.load(fp, Loader=yaml.loader.SafeLoader)
-    data = copy.deepcopy(tmp)
+    #tmp = yaml.load(fp, Loader=yaml.loader.SafeLoader)
+    #data = copy.deepcopy(tmp)
+
+    docs = yaml.load_all(fp, Loader=yaml.loader.SafeLoader)
+
+    data = {}
+    for doc in docs:
+        for key in doc :
+            data[key] = doc[key]
+
     fp.close()
 
     return data
@@ -224,6 +232,9 @@ def main():
             main_ip  = item['main_ip']
             main_ips[main_ip] = 1
 
+        #
+        # Agent
+        #
         for item in data['agents'] :
             logging.debug(item)
 
