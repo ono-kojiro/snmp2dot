@@ -25,7 +25,7 @@ def create_agents_view(conn, view):
 
     sql = 'CREATE VIEW {0} AS '.format(view)
     sql += 'SELECT '
-    sql += '  DISTINCT ip, mac, sysdescr, sysobjectid '
+    sql += '  DISTINCT sysname, main_ip, ip, mac, sysdescr, sysobjectid '
     sql += 'FROM agents_table '
     sql += ';'
 
@@ -56,7 +56,7 @@ def create_a2a_view(conn, view):
     sql += 'LEFT OUTER JOIN arp_table '
     sql += '  ON macaddrs_table.mac = arp_table.mac '
     sql += 'WHERE '
-    sql += '  dst_table.sysdescr IS NOT NULL '
+    sql += '  dst_table.sysdescr IS NOT NULL'
     sql += ';'
 
     c.execute(sql)

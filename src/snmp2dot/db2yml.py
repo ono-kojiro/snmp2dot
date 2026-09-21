@@ -31,6 +31,8 @@ def get_agents(conn) :
     rows = c.execute(sql)
     for row in rows :
         item = {
+            'sysname' : row['sysname'],
+            'main_ip' : row['main_ip'],
             'ip' : row['ip'],
             'mac' : row['mac'],
             'sysdescr' : row['sysdescr'],

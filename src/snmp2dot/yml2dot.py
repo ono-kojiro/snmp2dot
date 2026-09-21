@@ -218,11 +218,21 @@ def main():
 
         # agents
         logger.debug("begin agents loop ...")
+       
+        main_ips = {}
+        for item in data['agents'] :
+            main_ip  = item['main_ip']
+            main_ips[main_ip] = 1
 
         for item in data['agents'] :
             logging.debug(item)
 
+            main_ip  = item['main_ip']
             agent_ip  = item['ip']
+
+            if main_ip != agent_ip :
+                continue
+
             agent_mac = item['mac']
             agent_descr = item['sysdescr']
             agent_objectid = item['sysobjectid']

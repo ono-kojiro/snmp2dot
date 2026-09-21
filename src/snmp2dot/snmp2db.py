@@ -103,11 +103,11 @@ def get_agent_address(data) :
 
     res = data.get(mibname, None)
     if res is None:
-        return val
+        return addrs
 
     res = res.get(objname, None)
     if res is None:
-        return val
+        return addrs
 
     for attr in res:
         item = res[attr]
@@ -255,6 +255,7 @@ def create_agents_table(conn, table):
     sql = 'CREATE TABLE {0} ('.format(table)
     sql += 'id INTEGER PRIMARY KEY, '
     sql += 'sysname TEXT, '
+    sql += 'main_ip TEXT, '
     sql += 'ip TEXT, '
     sql += 'mac TEXT, '
     sql += 'sysdescr TEXT, '
@@ -349,9 +350,10 @@ def insert_macaddr(conn, table, item):
 
 def insert_agent(conn, table, item):
     c = conn.cursor()
-    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?);'.format(table)
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?, ?);'.format(table)
     lst = [
         item['sysname'],
+        item['main_ip'],
         item['ip'],
         item['mac'],
         item['sysdescr'],
@@ -426,28 +428,23 @@ def main():
 
         mac = get_scalar_value(data, 'BRIDGE-MIB::dot1dBaseBridgeAddress.0')
         mac = normalize_mac(mac)
+        
+        main_ip = None
+        for ip in ips :
+            if ip in nodes :
+                main_ip = ip
+                break
+        
+        if not main_ip :
+            print('ERROR: no main IP found for agents')
+            sys.exit(1)
 
-        ip = None
-        if len(ips) != 1 :
-            print('WARNING: some IP address found', file=sys.stderr)
-            print('WARNING: ips {0}'.format(ips))
-
-            for ip in ips :
-                if ip in nodes :
-                    print('INFO: found agent IP, {0}'.format(ip))
-                    break
-
-            if not ip :
-                print('ERROR: no IP found for agents')
-                sys.exit(1)
-        else :
-            ip = ips[0]
-            
         item = {
             'sysname': sysname,
             'sysdescr': sysdescr,
             'sysobjectid': sysobjectid,
-            'ip': ip,
+            'main_ip': main_ip,
+            'ip': main_ip,
             'mac': mac,
         }
         insert_agent(conn, 'agents_table', item)
