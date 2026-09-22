@@ -156,7 +156,7 @@ def get_at_if_index(data) :
 
             item = {
                 'idx' : idx,
-                'ifidx' : val,
+                'ifidx' : int(val),
             }
             items.append(item)
 
@@ -180,7 +180,7 @@ def get_at_net_address(data) :
             netaddr = hex2addr(val)
 
             item = {
-                'ifidx' : ifidx,
+                'ifidx' : int(ifidx),
                 'idx' : idx,
                 'netaddr' : netaddr,
             }
@@ -206,7 +206,7 @@ def get_at_phys_address(data) :
             physaddr = normalize_mac(physaddr)
 
             item = {
-                'ifidx' : ifidx,
+                'ifidx' : int(ifidx),
                 'idx' : idx,
                 'physaddr' : physaddr,
             }
@@ -251,7 +251,7 @@ def get_mac2port(data) :
 
         item = {
             'idx' : idx_mac,
-            'ifidx' : port,
+            'ifidx' : int(port),
         }
         items.append(item)
 
@@ -483,6 +483,7 @@ def create_netaddrs_view(conn, view):
     sql += '  netaddrs_table.ifidx = physaddrs_table.ifidx AND '
     sql += '  netaddrs_table.idx = physaddrs_table.idx '
     sql += '  ) '
+    sql += 'ORDER BY ifidx ASC '
     sql += ';'
 
     c.execute(sql)
@@ -502,6 +503,21 @@ def create_physaddrs_view(conn, view):
     sql += ';'
 
     c.execute(sql)
+
+def create_connections_view(conn, view) :
+    c = conn.cursor()
+
+    sql = 'DROP VIEW IF EXISTS {0};'.format(view)
+    c.execute(sql)
+
+    sql =  'CREATE VIEW {0} AS '.format(view)
+    sql += 'SELECT * FROM physaddrs_view '
+    sql += '  UNION ALL '
+    sql += 'SELECT * FROM fdbaddrs_view '
+    sql += ';'
+
+    c.execute(sql)
+
 
 
 def create_macaddrs_table(conn, table):
@@ -763,6 +779,8 @@ def main():
     create_fdbports_table(conn, 'fdbports_table')
     create_fdbaddrs_table(conn, 'fdbaddrs_table')
     create_fdbaddrs_view(conn, 'fdbaddrs_view')
+
+    create_connections_view(conn, 'connections_view')
 
     for jsonfile in args:
         data = read_json(jsonfile)
