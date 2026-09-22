@@ -36,6 +36,17 @@ def read_yaml(filepath):
     fp.close()
     return data
 
+def get_mib_data(data, oidname) :
+    # ex. oidname = 'RFC1213-MIB::atNetAddress'
+    mibname, objname = re.split(r'::', oidname)
+    
+    res = data.get(mibname, None)
+    if res is None:
+        return res
+
+    res = res.get(objname, None)
+    return res
+
 def get_mac2addrs_table(data) :
     mac2addrs = {}
 
@@ -94,12 +105,9 @@ def get_scalar_value(data, oidname) :
 def get_agent_address(data) :
     addrs = []
 
-    #oidname = 'IP-MIB::ipAdEntAddr'
     oidname = 'RFC1213-MIB::ipAdEntAddr'
     val = None
     mibname, objname = re.split(r'::', oidname)
-
-    logger.info("mibname for agent is {0}".format(mibname))
 
     res = data.get(mibname, None)
     if res is None:
@@ -119,6 +127,135 @@ def get_agent_address(data) :
         addrs.append(val)
 
     return addrs
+
+def hex2addr(hex_str) :
+    addr = ''
+    items = re.split(r':', hex_str)
+    for item in items:
+        val = int(item, 16)
+        addr += '.{0}'.format(val)
+
+    addr = re.sub(r'^\.', '', addr)
+    return addr
+
+def get_at_if_index(data) :
+    items = []
+
+    oidname = 'RFC1213-MIB::atIfIndex'
+    res = get_mib_data(data, oidname)
+    if not res :
+        return items
+
+    for ifidx in res:
+        # ex. ifidx="23"
+        
+        for idx in res[ifidx] :
+            # ex. idx: '1.192.168.122.10'
+
+            val = res[ifidx][idx]['val']
+
+            item = {
+                'idx' : idx,
+                'ifidx' : val,
+            }
+            items.append(item)
+
+    return items
+
+def get_at_net_address(data) :
+    items = []
+
+    oidname = 'RFC1213-MIB::atNetAddress'
+    res = get_mib_data(data, oidname)
+    if not res :
+        return items
+
+    for ifidx in res:
+        # ex. ifidx="23"
+        
+        for idx in res[ifidx] :
+            # ex. idx: '1.192.168.122.10'
+
+            val = res[ifidx][idx]['val']
+            netaddr = hex2addr(val)
+
+            item = {
+                'ifidx' : ifidx,
+                'idx' : idx,
+                'netaddr' : netaddr,
+            }
+            items.append(item)
+
+    return items
+
+def get_at_phys_address(data) :
+    items = []
+
+    oidname = 'RFC1213-MIB::atPhysAddress'
+    res = get_mib_data(data, oidname)
+    if not res :
+        return items
+
+    for ifidx in res:
+        # ex. idx="23"
+        
+        for idx in res[ifidx] :
+            # ex. idx: '1.192.168.122.10'
+
+            physaddr = res[ifidx][idx]['val']
+            physaddr = normalize_mac(physaddr)
+
+            item = {
+                'ifidx' : ifidx,
+                'idx' : idx,
+                'physaddr' : physaddr,
+            }
+            items.append(item)
+
+    return items
+
+# for buffalo
+def get_mac2addr(data) :
+    items = []
+
+    oidname = 'BRIDGE-MIB::dot1dTpFdbAddress'
+    res = get_mib_data(data, oidname)
+    if not res :
+        return items
+
+    for idx_mac in res:
+        # ex. idx_mac="STRING: xx:xx:xx:xx:xx:xx"
+        addr = res[idx_mac]['val']
+        addr = normalize_mac(addr)
+
+        item = {
+            'idx' : idx_mac,
+            'physaddr' : addr,
+        }
+        items.append(item)
+
+    return items
+
+# for buffalo
+def get_mac2port(data) :
+    items = []
+
+    oidname = 'BRIDGE-MIB::dot1dTpFdbPort'
+    res = get_mib_data(data, oidname)
+    if not res :
+        return items
+
+    for idx_mac in res:
+        # ex. idx_mac="STRING: xx:xx:xx:xx:xx:xx"
+        port = res[idx_mac]['val']
+
+        item = {
+            'idx' : idx_mac,
+            'ifidx' : port,
+        }
+        items.append(item)
+
+    return items
 
 def get_ifPhysAddress(data):
     records = {}
@@ -255,7 +392,6 @@ def create_agents_table(conn, table):
     sql = 'CREATE TABLE {0} ('.format(table)
     sql += 'id INTEGER PRIMARY KEY, '
     sql += 'sysname TEXT, '
-    sql += 'main_ip TEXT, '
     sql += 'ip TEXT, '
     sql += 'mac TEXT, '
     sql += 'sysdescr TEXT, '
@@ -273,7 +409,6 @@ def create_interfaces_table(conn, table):
     sql = 'CREATE TABLE {0} ('.format(table)
     sql += 'id INTEGER PRIMARY KEY, '
     sql += 'sysname TEXT, '
-    sql += 'agent TEXT, '
     sql += 'idx INTEGER, '
     sql += 'typ TEXT, '
     sql += 'status TEXT, '
@@ -282,6 +417,92 @@ def create_interfaces_table(conn, table):
     sql += ');'
 
     c.execute(sql)
+
+def create_ifindexes_table(conn, table):
+    c = conn.cursor()
+
+    sql = 'DROP TABLE IF EXISTS {0};'.format(table)
+    c.execute(sql)
+
+    sql = 'CREATE TABLE {0} ('.format(table)
+    sql += 'id INTEGER PRIMARY KEY, '
+    sql += 'sysname TEXT, '
+    sql += 'ifidx INTEGER, '
+    sql += 'idx TEXT '
+    sql += ');'
+
+    c.execute(sql)
+
+def create_netaddrs_table(conn, table):
+    c = conn.cursor()
+
+    sql = 'DROP TABLE IF EXISTS {0};'.format(table)
+    c.execute(sql)
+
+    sql = 'CREATE TABLE {0} ('.format(table)
+    sql += 'id INTEGER PRIMARY KEY, '
+    sql += 'sysname TEXT, '
+    sql += 'ifidx INTEGER, '
+    sql += 'idx TEXT, '
+    sql += 'netaddr TEXT '
+    sql += ');'
+
+    c.execute(sql)
+
+def create_physaddrs_table(conn, table):
+    c = conn.cursor()
+
+    sql = 'DROP TABLE IF EXISTS {0};'.format(table)
+    c.execute(sql)
+
+    sql = 'CREATE TABLE {0} ('.format(table)
+    sql += 'id INTEGER PRIMARY KEY, '
+    sql += 'sysname TEXT, '
+    sql += 'ifidx INTEGER, '
+    sql += 'idx TEXT, '
+    sql += 'physaddr TEXT '
+    sql += ');'
+
+    c.execute(sql)
+
+def create_netaddrs_view(conn, view):
+    c = conn.cursor()
+
+    sql = 'DROP VIEW IF EXISTS {0};'.format(view)
+    c.execute(sql)
+
+    sql = 'CREATE VIEW {0} AS '.format(view)
+    sql += 'SELECT '
+    sql += '  netaddrs_table.sysname AS sysname, '
+    sql += '  netaddrs_table.ifidx   AS ifidx, '
+    sql += '  netaddrs_table.netaddr AS netaddr, '
+    sql += '  physaddrs_table.physaddr AS physaddr '
+    sql += 'FROM netaddrs_table '
+    sql += 'LEFT OUTER JOIN physaddrs_table ON ('
+    sql += '  netaddrs_table.sysname = physaddrs_table.sysname AND '
+    sql += '  netaddrs_table.ifidx = physaddrs_table.ifidx AND '
+    sql += '  netaddrs_table.idx = physaddrs_table.idx '
+    sql += '  ) '
+    sql += ';'
+
+    c.execute(sql)
+
+def create_physaddrs_view(conn, view):
+    c = conn.cursor()
+
+    sql = 'DROP VIEW IF EXISTS {0};'.format(view)
+    c.execute(sql)
+
+    sql = 'CREATE VIEW {0} AS '.format(view)
+    sql += 'SELECT '
+    sql += '  physaddrs_table.sysname  AS sysname, '
+    sql += '  physaddrs_table.ifidx    AS ifidx, '
+    sql += '  physaddrs_table.physaddr AS physaddr '
+    sql += 'FROM physaddrs_table '
+    sql += ';'
+
+    c.execute(sql)
+
 
 def create_macaddrs_table(conn, table):
     c = conn.cursor()
@@ -292,12 +513,91 @@ def create_macaddrs_table(conn, table):
     sql = 'CREATE TABLE {0} ('.format(table)
     sql += 'id INTEGER PRIMARY KEY, '
     sql += 'sysname TEXT, '
-    sql += 'agent TEXT, '
     sql += 'idx INTEGER, '
     sql += 'mac TEXT '
     sql += ');'
 
     c.execute(sql)
+
+# for buffalo
+def create_fdbports_table(conn, table):
+    c = conn.cursor()
+
+    sql = 'DROP TABLE IF EXISTS {0};'.format(table)
+    c.execute(sql)
+
+    sql = 'CREATE TABLE {0} ('.format(table)
+    sql += 'id INTEGER PRIMARY KEY, '
+    sql += 'sysname TEXT, '
+    sql += 'ifidx INTEGER, '
+    sql += 'idx TEXT '
+    sql += ');'
+
+    c.execute(sql)
+
+# for buffalo
+def insert_fdbport(conn, table, sysname, item):
+    c = conn.cursor()
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ? );'.format(table)
+    lst = [
+        sysname,
+        item['ifidx'],
+        item['idx'],
+    ]
+
+    c.execute(sql, lst)
+
+# for buffalo
+def create_fdbaddrs_table(conn, table):
+    c = conn.cursor()
+
+    sql = 'DROP TABLE IF EXISTS {0};'.format(table)
+    c.execute(sql)
+
+    sql = 'CREATE TABLE {0} ('.format(table)
+    sql += 'id INTEGER PRIMARY KEY, '
+    sql += 'sysname TEXT, '
+    sql += 'idx TEXT, '
+    sql += 'physaddr TEXT '
+    sql += ');'
+
+    c.execute(sql)
+
+# for buffalo
+def create_fdbaddrs_view(conn, view):
+    c = conn.cursor()
+
+    sql = 'DROP VIEW IF EXISTS {0};'.format(view)
+    c.execute(sql)
+
+    sql = 'CREATE VIEW {0} AS '.format(view)
+    sql += 'SELECT '
+    sql += '  fdbaddrs_table.sysname  AS sysname, '
+    sql += '  fdbports_table.ifidx    AS ifidx, '
+    sql += '  fdbaddrs_table.physaddr AS physaddr '
+    sql += 'FROM fdbaddrs_table '
+    sql += 'LEFT OUTER JOIN fdbports_table ON ('
+    sql += '  fdbaddrs_table.sysname = fdbports_table.sysname AND '
+    sql += '  fdbaddrs_table.idx = fdbports_table.idx '
+    sql += ') '
+    sql += 'WHERE fdbports_table.ifidx != 0 '
+    sql += 'ORDER BY ifidx ASC '
+    sql += ';'
+
+    c.execute(sql)
+
+
+# for buffalo
+def insert_fdbaddr(conn, table, sysname, item):
+    c = conn.cursor()
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ? );'.format(table)
+    lst = [
+        sysname,
+        item['idx'],
+        item['physaddr'],
+    ]
+
+    c.execute(sql, lst)
 
 def create_macaddrs_view(conn, view):
     c = conn.cursor()
@@ -307,7 +607,7 @@ def create_macaddrs_view(conn, view):
 
     sql = 'CREATE VIEW {0} AS '.format(view)
     sql += 'SELECT '
-    sql += '  interfaces_table.agent AS agent, '
+    sql += '  interfaces_table.sysname AS sysname, '
     sql += '  interfaces_table.idx AS idx, '
     sql += '  macaddrs_table.mac AS mac '
     sql += 'FROM interfaces_table '
@@ -321,10 +621,9 @@ def create_macaddrs_view(conn, view):
 
 def insert_interface(conn, table, item):
     c = conn.cursor()
-    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?, ?, ? );'.format(table)
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?, ? );'.format(table)
     lst = [
         item['sysname'],
-        item['agent'],
         item['idx'],
         item['typ'],
         item['status'],
@@ -334,26 +633,58 @@ def insert_interface(conn, table, item):
 
     c.execute(sql, lst)
 
+def insert_ifindex(conn, table, sysname, item):
+    c = conn.cursor()
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?);'.format(table)
+    lst = [
+        sysname,
+        item['ifidx'],
+        item['idx'],
+    ]
+
+    c.execute(sql, lst)
+
+def insert_netaddr(conn, table, sysname, item):
+    c = conn.cursor()
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?);'.format(table)
+    lst = [
+        sysname,
+        item['ifidx'],
+        item['idx'],
+        item['netaddr'],
+    ]
+
+    c.execute(sql, lst)
+
+def insert_physaddr(conn, table, sysname, item):
+    c = conn.cursor()
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?);'.format(table)
+    lst = [
+        sysname,
+        item['ifidx'],
+        item['idx'],
+        item['physaddr'],
+    ]
+
+    c.execute(sql, lst)
+
 def insert_macaddr(conn, table, item):
     c = conn.cursor()
     pprint(item)
-    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?);'.format(table)
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?);'.format(table)
     lst = [
         item['sysname'],
-        item['agent'],
         item['idx'],
         item['mac'],
     ]
 
     c.execute(sql, lst)
 
-
 def insert_agent(conn, table, item):
     c = conn.cursor()
-    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?, ?);'.format(table)
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?);'.format(table)
     lst = [
         item['sysname'],
-        item['main_ip'],
         item['ip'],
         item['mac'],
         item['sysdescr'],
@@ -361,16 +692,29 @@ def insert_agent(conn, table, item):
     ]
     c.execute(sql, lst)
 
+def create_agents_view(conn, view):
+    c = conn.cursor()
+
+    sql = 'DROP VIEW IF EXISTS {0};'.format(view)
+    c.execute(sql)
+
+    sql = 'CREATE VIEW {0} AS '.format(view)
+    sql += 'SELECT '
+    sql += '  DISTINCT sysname, ip, mac, sysdescr, sysobjectid '
+    sql += 'FROM agents_table '
+    sql += ';'
+
+    c.execute(sql)
+
 def main():
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "hvo:c:",
+            "hvo:",
             [
                 "help",
                 "version",
                 "output=",
-                "config=",
             ]
         )
     except getopt.GetoptError as err:
@@ -378,7 +722,6 @@ def main():
         sys.exit(2)
     
     output = None
-    config_yml = None
 	
     for o, a in opts:
         if o in ("-v", "--version"):
@@ -389,8 +732,6 @@ def main():
             sys.exit(0)
         elif o in ("-o", "--output"):
             output = a
-        elif o in ("-c", "--config"):
-            config_yml = a
         else:
             assert False, "unknown option"
 	
@@ -405,15 +746,23 @@ def main():
 
     logging.basicConfig(level=logging.DEBUG)
 
-    pprint(config_yml, stream=sys.stderr)
-    config = read_yaml(config_yml)
-    pprint(config, stream=sys.stderr)
-    nodes = config['nodes']
-
     conn = sqlite3.connect(output)
     create_agents_table(conn, 'agents_table')
     create_interfaces_table(conn, 'interfaces_table')
     create_macaddrs_table(conn, 'macaddrs_table')
+
+    create_ifindexes_table(conn, 'ifindexes_table')
+
+    create_netaddrs_table(conn, 'netaddrs_table')
+    create_physaddrs_table(conn, 'physaddrs_table')
+    
+    create_netaddrs_view(conn, 'netaddrs_view')
+    create_physaddrs_view(conn, 'physaddrs_view')
+
+    # for buffalo
+    create_fdbports_table(conn, 'fdbports_table')
+    create_fdbaddrs_table(conn, 'fdbaddrs_table')
+    create_fdbaddrs_view(conn, 'fdbaddrs_view')
 
     for jsonfile in args:
         data = read_json(jsonfile)
@@ -428,26 +777,17 @@ def main():
 
         mac = get_scalar_value(data, 'BRIDGE-MIB::dot1dBaseBridgeAddress.0')
         mac = normalize_mac(mac)
-        
-        main_ip = None
-        for ip in ips :
-            if ip in nodes :
-                main_ip = ip
-                break
-        
-        if not main_ip :
-            print('ERROR: no main IP found for agents, {0}'.format(jsonfile))
-            sys.exit(1)
+       
+        for ip in ips:
+            item = {
+                'sysname': sysname,
+                'sysdescr': sysdescr,
+                'sysobjectid': sysobjectid,
+                'ip': ip,
+                'mac': mac,
+            }
 
-        item = {
-            'sysname': sysname,
-            'sysdescr': sysdescr,
-            'sysobjectid': sysobjectid,
-            'main_ip': main_ip,
-            'ip': main_ip,
-            'mac': mac,
-        }
-        insert_agent(conn, 'agents_table', item)
+            insert_agent(conn, 'agents_table', item)
 
         if2status = get_dict_values(data, 'IF-MIB::ifOperStatus')
         if2descr  = get_dict_values(data, 'IF-MIB::ifDescr')
@@ -455,7 +795,31 @@ def main():
         ifaces = get_dict_values(data, 'IF-MIB::ifIndex')
         
         if2phys = get_dict_values(data, 'IF-MIB::ifPhysAddress')
+
+        # extract RFC1213-MIB::atIfIndex
+        items = get_at_if_index(data)
+        for item in items :
+            insert_ifindex(conn, 'ifindexes_table', sysname, item)
+
+        # extract RFC1213-MIB::atNetAddress
+        items = get_at_net_address(data)
+        for item in items :
+            insert_netaddr(conn, 'netaddrs_table', sysname, item)
         
+        # extract RFC1213-MIB::atPhysAddress
+        items = get_at_phys_address(data)
+        for item in items :
+            insert_physaddr(conn, 'physaddrs_table', sysname, item)
+
+        # for buffalo
+        items = get_mac2port(data)
+        for item in items :
+            insert_fdbport(conn, 'fdbports_table', sysname, item)
+        
+        items = get_mac2addr(data)
+        for item in items :
+            insert_fdbaddr(conn, 'fdbaddrs_table', sysname, item)
+
         for iface in ifaces :
             status = if2status[iface]
             descr  = if2descr[iface]
@@ -467,7 +831,6 @@ def main():
 
             item = {
                 'sysname': sysname,
-                'agent': ip,
                 'idx': iface,
                 'typ' : typ,
                 'status': status,
@@ -485,7 +848,6 @@ def main():
             for mac in macs:
                 item = {
                     'sysname': sysname,
-                    'agent': ip,
                     'idx'  : iface,
                     'mac'  : mac,
                 }
@@ -510,12 +872,12 @@ def main():
 
                 item = {
                     'sysname' : sysname,
-                    'agent': ip,
                     'idx'  : iface,
                     'mac'  : mac,
                 }
                 insert_macaddr(conn, 'macaddrs_table', item)
 
+    create_agents_view(conn, 'agents_view')
     conn.commit()
     conn.close()
 
