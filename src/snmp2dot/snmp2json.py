@@ -9,8 +9,6 @@ import yaml
 from pprint import pprint
 import json
 
-import snmp2dot
-
 def usage():
     print("Usage : {0}".format(sys.argv[0]))
 

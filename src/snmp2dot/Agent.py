@@ -5,16 +5,29 @@ import copy
 
 from . import Port
 
+import logging
+logger = logging.getLogger(__name__)
+
 class Agent() :
-    def __init__(self, uport, dports, imagepath, \
-            logger=None, \
-            minlen=4, \
-            sysdescr=None, \
-            sysobjectid=None, \
+    count = 0
+
+    def __init__(self, 
+            sysname="No sysname",
+            ifaces=[],
+            default_ifidx=None,
+            uport=None, dports=[], imagepath=None, 
+            logger=None,
+            minlen=4, 
+            sysdescr=None,
+            sysobjectid=None,
             ) :
 
-        self.ip  = uport.ip
-        self.mac = uport.mac
+        self.sysname = sysname
+        self.ifaces  = ifaces
+        self.default_ifidx = default_ifidx
+
+        #self.ip  = uport.ip
+        #self.mac = uport.mac
         self.indent = 1
         self.minlen = minlen
 
@@ -25,7 +38,6 @@ class Agent() :
 
         self.sysdescr = sysdescr
         self.sysobjectid= sysobjectid
-        self.logger = logger
    
     def get_uport(self) :
         return self.uport
@@ -40,31 +52,39 @@ class Agent() :
         indent = self.indent
         minlen = self.minlen
 
-        agent_ip = self.ip
-        agent_mac = self.mac
-        uport    = self.uport
-        dports = self.dports
+        #agent_ip = self.ip
+        #agent_mac = self.mac
+        #uport    = self.uport
+        #dports = self.dports
 
         imagepath = self.imagepath
         
         if imagepath is None :
             imagepath = 'icons/doc_png/small_hub.png'
 
+        sysname = re.sub(r'\.', '_', self.sysname)
+
         lines = []
-        cluster = re.sub(r'\.', '_', agent_ip)
-        lines.append('subgraph cluster_{0} {{'.format(cluster))
-        label = '{0}'.format(agent_ip)
-        label += '\n{0}'.format(agent_mac)
-        label += '\n{0}'.format(self.sysobjectid)
+        #cluster = re.sub(r'\.', '_', agent_ip)
+        lines.append('// count is {0}'.format(Agent.count))
+        Agent.count = Agent.count + 1
+
+        lines.append('subgraph cluster_{0} {{'.format(sysname))
+        #label = '{0}'.format(agent_ip)
+        #label += '\n{0}'.format(agent_mac)
+        #label += '\n{0}'.format(self.sysobjectid)
+
+        label = self.sysname
+
         lines.append('    label = "{0}";'.format(label))
         lines.append('')
-        lines.append('    node_{0}_image ['.format(cluster))
+        lines.append('    node_{0}_image ['.format(sysname))
         lines.append('        shape=none')
         lines.append('        image="{0}"'.format(imagepath))
         lines.append('        label=""')
         lines.append('        fixedsize=true')
         lines.append('        imagescale=height')
-        lines.append('    ];'.format(cluster))
+        lines.append('    ];')
             
        
         lines.append('')
@@ -72,39 +92,45 @@ class Agent() :
         line = '    // uplink port and downlink port'
         lines.append(line)
 
-        for port in [ self.uport ] + self.dports:
+        for ifid in self.ifaces :
+            name = 'node_{0}_port{1}'.format(sysname, ifid)
+            
             line  = '    '
-            line += 'node_{0}_port{1} ['.format(cluster, port.pnum)
-            line += '  shape=rectangle label="{0}"'.format(port.pnum)
+            line += '{0} ['.format(name)
+            line += '  shape=rectangle label="{0}"'.format(ifid)
             lines.append(line)
-                    
+                
             line  = '    '
             line += '  fixedsize=true'
             line += '  width=0.3 height=0.3 ];'
             lines.append(line)
+            line += ''
+
 
         lines.append('')
         lines.append('    {')
-        lines.append('        // downlink port only')
+        lines.append('        // grouping downlink port')
         lines.append('        rank = same;')
-
-        # downlink port only
-        for port in dports:
-             line  = '        '
-             line += 'node_{0}_port{1};'.format(cluster, port.pnum)
-             lines.append(line)
         
+        for ifid in self.ifaces :
+            if int(ifid) == int(self.default_ifidx) :
+                # ignore uplink port
+                continue
+
+            line  = '        '
+            line += 'node_{0}_port{1};'.format(sysname, ifid)
+            lines.append(line)
+
         lines.append('    }')
         lines.append('')
 
-        #color = 'none'
         color = 'red'
         
         line  = '    // uplink port -> node_image'
         lines.append(line)
 
-        src = 'node_{0}_port{1}'.format(cluster, uport.pnum)
-        dst = 'node_{0}_image'.format(cluster)
+        src = 'node_{0}_port{1}'.format(sysname, self.default_ifidx)
+        dst = 'node_{0}_image'.format(sysname)
     
         line  = '    '
         line += '{0} -> {1}'.format(src, dst)
@@ -118,17 +144,22 @@ class Agent() :
         color = 'blue'
         line  = '    // node_image -> downlink port'
         lines.append(line)
-        for port in dports:
+        for ifid in self.ifaces :
+            if int(ifid) == int(self.default_ifidx) :
+                # ignore uplink port
+                continue
+
             line  = '    '
-            src = 'node_{0}_image'.format(cluster)
-            dst = 'node_{0}_port{1}'.format(cluster, port.pnum)
+            src = 'node_{0}_image'.format(sysname)
+            dst = 'node_{0}_port{1}'.format(sysname, ifid)
             line += '{0} -> {1} [color={2}];'.format(src, dst, color)
             lines.append(line)
         
         lines.append('')
+
         src = None
         dst = None
-        for port in dports:
+        for port in self.dports:
             dst = port.pnum
             if src is None:
                 src = dst

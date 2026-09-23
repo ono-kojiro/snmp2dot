@@ -12,11 +12,16 @@ import re
 import sqlite3
 from pprint import pprint
 
-
-import snmp2dot
-
 import logging
 logger = logging.getLogger(__name__)
+
+from .sysname import *
+from .interfaces import *
+from .utils import *
+from .agent2agent import *
+from .agent2terminal import *
+
+from .views import *
 
 def version():
     print('{0}'.format(snmp2dot.__version__))
@@ -86,21 +91,6 @@ def get_dict_values(data, oidname) :
         records[key] = val
 
     return records
-
-def get_scalar_value(data, oidname) :
-    val = None
-
-    mibname, objname = re.split(r'::', oidname)
-
-    res = data.get(mibname, None)
-    if res is None:
-        return val
-
-    res = res.get(objname, None)
-    if res is None:
-        return val
-
-    return res['val']
 
 def get_agent_address(data) :
     addrs = []
@@ -214,6 +204,49 @@ def get_at_phys_address(data) :
 
     return items
 
+def get_default_ifidx(data):
+    
+    items = []
+    oidname = 'RFC1213-MIB::ipRouteIfIndex'
+
+    res = get_mib_data(data, oidname)
+    if not res :
+        return items
+
+    for addr in res:
+        # ex. idx="0.0.0.0"
+        val = res[addr]['val']
+
+        item = {
+            'addr' : addr,
+            'ifidx' : val,
+        }
+        items.append(item)
+
+    default_ifidx = None
+    for item in items:
+        if '0.0.0.0' in item['addr'] :
+            default_ifidx = item['ifidx']
+            break
+
+    return default_ifidx
+
+def get_default_router_ip(data):
+    items = []
+
+    oidname = 'RFC1213-MIB::ipRouteNextHop'
+    res = get_mib_data(data, oidname)
+    if not res :
+        return items
+
+    default_router_ip = None
+
+    for addr in res.keys():
+        if addr == '0.0.0.0' :
+            default_router_ip = res[addr]['val']
+        
+    return default_router_ip
+
 # for buffalo
 def get_mac2addr(data) :
     items = []
@@ -285,6 +318,26 @@ def get_ifPhysAddress(data):
         records[ifid].append(mac)
     return records
 
+def get_ifid_ip_mac_list(data):
+    items = {}
+
+    oidname = "RFC1213-MIB::ipNetToMediaPhysAddress"
+    res = get_mib_data(data, oidname)
+    if not res :
+        return items
+
+    for ifidx in res.keys():
+        if not ifidx in items :
+            items[ifidx] = {}
+
+        for ip in res[ifidx].keys() :
+            mac = res[ifidx][ip]['val']
+            mac = normalize_mac(mac)
+
+            items[ifidx][ip] = mac
+
+    return items
+
 def get_ipNetToMediaPhysAddress(data):
     records = {}
 
@@ -300,10 +353,8 @@ def get_ipNetToMediaPhysAddress(data):
         return records
 
     for ifid in res:
-        pprint(ifid, stream=sys.stderr)
         for addr in res[ifid]:
             item = res[ifid][addr]
-            pprint(item)
             typ = item['typ']
             mac = item['val']
             mac = normalize_mac(mac)
@@ -361,28 +412,6 @@ def get_mac2status_table(data, oidname) :
 
     return records
 
-def normalize_mac(mac_str) :
-    if mac_str is None :
-        return None
-
-    mac_str = re.sub(r'\s+$', '', mac_str)
-    expr = r"([0-9a-fA-F ]{1,2})" + r"([-: ]?([0-9a-fA-F]{1,2}))" * 5 + r"$"
-    m = re.match(expr, mac_str.lower())
-    mac = ''
-
-    if m :
-        # 1, 3, 5, ... , 11
-        for i in range(1, 12, 2) :
-            val = int(m.group(i), 16)
-            mac += ":{0:02x}".format(val)
-        mac = re.sub(r'^:', '', mac)
-        #print("DEBUG: {0} -> {1}".format(mac_str, mac))
-    else :
-        print("ERROR: invalid mac address, '{0}'".format(mac_str))
-        sys.exit(1)
-
-    return mac
-
 def create_agents_table(conn, table):
     c = conn.cursor()
 
@@ -395,25 +424,8 @@ def create_agents_table(conn, table):
     sql += 'ip TEXT, '
     sql += 'mac TEXT, '
     sql += 'sysdescr TEXT, '
-    sql += 'sysobjectid TEXT '
-    sql += ');'
-
-    c.execute(sql)
-
-def create_interfaces_table(conn, table):
-    c = conn.cursor()
-
-    sql = 'DROP TABLE IF EXISTS {0};'.format(table)
-    c.execute(sql)
-
-    sql = 'CREATE TABLE {0} ('.format(table)
-    sql += 'id INTEGER PRIMARY KEY, '
-    sql += 'sysname TEXT, '
-    sql += 'idx INTEGER, '
-    sql += 'typ TEXT, '
-    sql += 'status TEXT, '
-    sql += 'descr TEXT, '
-    sql += 'phys TEXT '
+    sql += 'sysobjectid TEXT, '
+    sql += 'default_ifidx TEXT '
     sql += ');'
 
     c.execute(sql)
@@ -483,7 +495,7 @@ def create_netaddrs_view(conn, view):
     sql += '  netaddrs_table.ifidx = physaddrs_table.ifidx AND '
     sql += '  netaddrs_table.idx = physaddrs_table.idx '
     sql += '  ) '
-    sql += 'ORDER BY ifidx ASC '
+    sql += 'ORDER BY sysname ASC, ifidx ASC, netaddr ASC '
     sql += ';'
 
     c.execute(sql)
@@ -622,7 +634,7 @@ def create_macaddrs_view(conn, view):
     c.execute(sql)
 
     sql = 'CREATE VIEW {0} AS '.format(view)
-    sql += 'SELECT '
+    sql += 'SELECT DISTINCT '
     sql += '  interfaces_table.sysname AS sysname, '
     sql += '  interfaces_table.idx AS idx, '
     sql += '  macaddrs_table.mac AS mac '
@@ -634,20 +646,27 @@ def create_macaddrs_view(conn, view):
 
     c.execute(sql)
 
-
-def insert_interface(conn, table, item):
+def create_graph_view(conn, view):
     c = conn.cursor()
-    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?, ? );'.format(table)
-    lst = [
-        item['sysname'],
-        item['idx'],
-        item['typ'],
-        item['status'],
-        item['descr'],
-        item['phys'],
-    ]
+    
+    sql = 'DROP VIEW IF EXISTS {0};'.format(view)
+    c.execute(sql)
+    
+    sql = 'CREATE VIEW {0} AS '.format(view)
+    sql += 'SELECT DISTINCT '
+    sql += '  conns_view.sysname AS sysname, '
+    sql += '  conns_view.ifidx   AS ifidx, '
+    sql += '  conns_view.physaddr AS mac, '
+    sql += '  arp_table.ip  AS ip '
+    sql += 'FROM conns_view '
+    sql += 'LEFT OUTER JOIN arp_table ON ('
+    sql += '  conns_view.physaddr = arp_table.mac '
+    sql += ') '
+    sql += 'ORDER BY sysname ASC, ifidx ASC, mac ASC, ip ASC '
+    sql += ';'
+    
+    c.execute(sql)
 
-    c.execute(sql, lst)
 
 def insert_ifindex(conn, table, sysname, item):
     c = conn.cursor()
@@ -686,7 +705,8 @@ def insert_physaddr(conn, table, sysname, item):
 
 def insert_macaddr(conn, table, item):
     c = conn.cursor()
-    pprint(item)
+    #pprint(item)
+
     sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?);'.format(table)
     lst = [
         item['sysname'],
@@ -698,13 +718,14 @@ def insert_macaddr(conn, table, item):
 
 def insert_agent(conn, table, item):
     c = conn.cursor()
-    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?);'.format(table)
+    sql = 'INSERT INTO {0} VALUES ( NULL, ?, ?, ?, ?, ?, ? );'.format(table)
     lst = [
         item['sysname'],
         item['ip'],
         item['mac'],
         item['sysdescr'],
         item['sysobjectid'],
+        item['default_ifidx'],
     ]
     c.execute(sql, lst)
 
@@ -716,12 +737,33 @@ def create_agents_view(conn, view):
 
     sql = 'CREATE VIEW {0} AS '.format(view)
     sql += 'SELECT '
-    sql += '  DISTINCT sysname, ip, mac, sysdescr, sysobjectid '
+    sql += '  DISTINCT sysname, mac, sysdescr, sysobjectid, default_ifidx '
     sql += 'FROM agents_table '
     sql += ';'
 
     c.execute(sql)
 
+def detect_default_router_port(data, invalid_default_ifidx):
+    default_router_ip = get_default_router_ip(data)
+    
+    ifid_ip_mac_list = get_ifid_ip_mac_list(data)
+    ip_mac_list = ifid_ip_mac_list[invalid_default_ifidx]
+    default_router_mac = ip_mac_list[default_router_ip]
+    
+    mac2port = get_mac2port(data)
+
+    default_router_port = None
+    for item in mac2port :
+        idx_mac = item['idx']
+        ifidx   = item['ifidx']
+        mac = re.sub(r'STRING: ', '', idx_mac)
+        mac = normalize_mac(mac)
+        if default_router_mac == mac :
+            default_router_port = ifidx
+            break
+
+    return default_router_port
+        
 def main():
     try:
         opts, args = getopt.getopt(
@@ -764,7 +806,8 @@ def main():
 
     conn = sqlite3.connect(output)
     create_agents_table(conn, 'agents_table')
-    create_interfaces_table(conn, 'interfaces_table')
+    create_interfaces_table(conn)
+    create_interfaces_view(conn)
     create_macaddrs_table(conn, 'macaddrs_table')
 
     create_ifindexes_table(conn, 'ifindexes_table')
@@ -774,13 +817,25 @@ def main():
     
     create_netaddrs_view(conn, 'netaddrs_view')
     create_physaddrs_view(conn, 'physaddrs_view')
-
+    create_macaddrs_view(conn, 'macaddrs_view')
+    
     # for buffalo
     create_fdbports_table(conn, 'fdbports_table')
     create_fdbaddrs_table(conn, 'fdbaddrs_table')
     create_fdbaddrs_view(conn, 'fdbaddrs_view')
 
-    create_connections_view(conn, 'connections_view')
+    create_connections_view(conn, 'conns_view')
+
+    # for graph
+    create_graph_view(conn, 'graph_view')
+
+    create_sysnames_table(conn)
+    
+    create_agent2agent_view(conn)
+    create_agent2terminal_view(conn)
+
+    create_a2t_edges_view(conn)
+    create_a2a_edges_view(conn)
 
     for jsonfile in args:
         data = read_json(jsonfile)
@@ -788,31 +843,37 @@ def main():
         sysname  = get_scalar_value(data, 'SNMPv2-MIB::sysName.0')
         sysdescr = get_scalar_value(data, 'SNMPv2-MIB::sysDescr.0')
         sysobjectid = get_scalar_value(data, 'SNMPv2-MIB::sysObjectID.0')
-        print('DEBUG: sysobjectid is {0}'.format(sysobjectid))
+        ifnumber = get_scalar_value(data, 'IF-MIB::ifNumber.0')
+
+        #print('DEBUG: sysobjectid is {0}'.format(sysobjectid))
 
         ips = get_agent_address(data)
         logging.debug('found {0}'.format(ips))
 
         mac = get_scalar_value(data, 'BRIDGE-MIB::dot1dBaseBridgeAddress.0')
         mac = normalize_mac(mac)
-       
-        for ip in ips:
-            item = {
-                'sysname': sysname,
-                'sysdescr': sysdescr,
-                'sysobjectid': sysobjectid,
-                'ip': ip,
-                'mac': mac,
-            }
-
-            insert_agent(conn, 'agents_table', item)
-
-        if2status = get_dict_values(data, 'IF-MIB::ifOperStatus')
-        if2descr  = get_dict_values(data, 'IF-MIB::ifDescr')
-        if2type   = get_dict_values(data, 'IF-MIB::ifType')
-        ifaces = get_dict_values(data, 'IF-MIB::ifIndex')
         
-        if2phys = get_dict_values(data, 'IF-MIB::ifPhysAddress')
+        # for OPNsense
+        if2macs = get_ipNetToMediaPhysAddress(data)
+        
+        default_ifidx = get_default_ifidx(data)
+
+        if int(default_ifidx) > int(ifnumber) :
+            print('WARNING: invalid default_ifidx')
+            default_ifidx = detect_default_router_port(data, default_ifidx)
+            print('WARNING: changed default_ifidx to {0}'.format(default_ifidx))
+        
+        item = {
+            'sysname': sysname,
+            'sysdescr': sysdescr,
+            'sysobjectid': sysobjectid,
+            'ip' : '',
+            'mac': mac,
+            'default_ifidx' : default_ifidx,
+        }
+        insert_agent(conn, 'agents_table', item)
+
+        insert_sysname(conn, sysname)
 
         # extract RFC1213-MIB::atIfIndex
         items = get_at_if_index(data)
@@ -838,62 +899,10 @@ def main():
         for item in items :
             insert_fdbaddr(conn, 'fdbaddrs_table', sysname, item)
 
-        for iface in ifaces :
-            status = if2status[iface]
-            descr  = if2descr[iface]
-            typ    = if2type[iface]
-            phys = if2phys[iface]
-       
-            if phys != '' :
-                phys = normalize_mac(phys)
-
-            item = {
-                'sysname': sysname,
-                'idx': iface,
-                'typ' : typ,
-                'status': status,
-                'descr': descr,
-                'phys' : phys,
-            }
-            insert_interface(conn, 'interfaces_table', item)
-        
-        if2macs = get_if2mac_table(data, 'BRIDGE-MIB::dot1dTpFdbPort')
-        for iface in ifaces :
-            if not iface in if2macs:
-                continue
-
-            macs = if2macs[iface]
-            for mac in macs:
-                item = {
-                    'sysname': sysname,
-                    'idx'  : iface,
-                    'mac'  : mac,
-                }
-                insert_macaddr(conn, 'macaddrs_table', item)
-
-        # for OPNsense
-        # ex. agent_macs[ifid] = [ mac1, mac2, ...]
-        agent_macs = get_ifPhysAddress(data)
-
-        # for OPNsense
-        if2macs = get_ipNetToMediaPhysAddress(data)
-        pprint(if2macs)
-        for iface in ifaces :
-            if not iface in if2macs:
-                continue
-
-            macs = if2macs[iface]
-            for mac in macs:
-                if iface in agent_macs:
-                    if mac in agent_macs[iface]:
-                        continue
-
-                item = {
-                    'sysname' : sysname,
-                    'idx'  : iface,
-                    'mac'  : mac,
-                }
-                insert_macaddr(conn, 'macaddrs_table', item)
+        #
+        # create interfaces_table
+        #
+        build_interfaces_table(conn, data)
 
     create_agents_view(conn, 'agents_view')
     conn.commit()

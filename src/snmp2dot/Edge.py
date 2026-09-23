@@ -9,7 +9,9 @@ DST_TYPE_AGENT = 1
 class Edge() :
     #def __init__(self, src_ip, src_port, dst_mac, dst_ip, dst_port,
     #             is_src_port_uplink, is_available) :
-    def __init__(self, sport, dport, is_available) :
+    def __init__(self, src=None, dst=None, sport=None, dport=None, is_available=True) :
+        self.src = src
+        self.dst = dst
 
         self.indent = 1
         self.minlen = 5
@@ -26,9 +28,10 @@ class Edge() :
         self.dport.ptype = dst_type
 
     def print(self, fp) :
-        src = str(self.sport)
-        dst = str(self.dport)
-
+        src = self.src
+        dst = self.dst
+        fp.write('   // DEBUG: print in Edge\n')
+        
         portpos = 'e' # east
 
         line  = ' ' * self.indent * 4

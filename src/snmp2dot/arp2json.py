@@ -11,8 +11,6 @@ import json
 
 import ipaddress
 
-import snmp2dot
-
 def version():
     print('{0}'.format(snmp2dot.__version__))
 

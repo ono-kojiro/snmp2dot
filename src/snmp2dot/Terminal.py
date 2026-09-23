@@ -1,10 +1,20 @@
 import sys
 import re
 
-from snmp2dot.Port import Port
+from .Port import Port
 
 class Terminal() :
-    def __init__(self, dport, imagepath, is_src_port_uplink) :
+    def __init__(self,
+                 ip=None,
+                 mac=None,
+                 dport=None,
+                 imagepath=None,
+                 is_src_port_uplink=None
+        ) :
+
+        self.ip = ip
+        self.mac = mac
+
         self.indent = 1
         
         self.imagepath = imagepath
@@ -23,49 +33,58 @@ class Terminal() :
         sport = self.sport
 
         lines = []
-        if dport.ip :
-            label = dport.ip + '\n' + dport.mac
-            cluster = re.sub(r'\.', '_', dport.ip)
-        else :
-            label = dport.mac
-            cluster = re.sub(r'\:', '_', dport.mac)
+        #if dport.ip :
+        #    label = dport.ip + '\n' + dport.mac
+        #    cluster = re.sub(r'\.', '_', dport.ip)
+        #else :
+        #    label = dport.mac
+        #    cluster = re.sub(r'\:', '_', dport.mac)
+
+        label = self.mac
+        name = re.sub(r'\:', '_', self.mac)
 
         if imagepath is None : 
             imagepath='icons/doc_png/pc.png'
 
-        lines.append('subgraph cluster_{0} {{'.format(cluster))
+        lines.append('subgraph cluster_{0} {{'.format(name))
         lines.append('    label = "{0}";'.format(label))
-        lines.append('    node_{0}_image ['.format(cluster))
+        lines.append('    node_{0}_image ['.format(name))
         lines.append('        shape=none')
         lines.append('        image="{0}"'.format(imagepath))
         lines.append('        label=""')
         lines.append('        fixedsize=true')
         lines.append('        imagescale=width')
-        lines.append('    ];'.format(cluster))
-        lines.append('    node_{0}_{1} ['.format(cluster, dport.tag))
+        lines.append('    ];')
+        lines.append('    node_{0}_port1 ['.format(name))
         lines.append('        shape=box')
-        lines.append('        label="{0}"'.format(dport.label))
+        lines.append('        label="1"')
         lines.append('        fixedsize=true')
         lines.append('        width=0.3')
         lines.append('        height=0.3')
         lines.append('    ];')
 
-        lines.append('    node_{0}_{1} ['.format(cluster, sport.tag))
-        lines.append('        style=invisible')
+        lines.append('    node_{0}_dummy ['.format(name))
+        #lines.append('        style=invisible')
         lines.append('        shape=box')
-        lines.append('        label="{0}"'.format(sport.label))
+        lines.append('        label="d"')
         lines.append('        fixedsize=true')
         lines.append('        width=0.3')
         lines.append('        height=0.3')
         lines.append('    ];')
 
-        if self.port_order == 0 :
-            lines.append('    node_{0}_{1} -> node_{0}_image [color=none, weight=100, len=0.3];'.format(cluster, dport.tag))
-            lines.append('    node_{0}_image -> node_{0}_{1} [color=none ];'.format(cluster, sport.tag))
-        else :
-            lines.append('    node_{0}_{1} -> node_{0}_image [color=none, weight=100, len=0.3];'.format(cluster, sport.tag))
-            lines.append('    node_{0}_image -> node_{0}_{1} [color=none ];'.format(cluster, dport.tag))
+        #if self.port_order == 0 :
+        #    lines.append('    node_{0}_{1} -> node_{0}_image [color=none, weight=100, len=0.3];'.format(cluster, dport.tag))
+        #    lines.append('    node_{0}_image -> node_{0}_{1} [color=none ];'.format(cluster, sport.tag))
+        #else :
+        #    lines.append('    node_{0}_{1} -> node_{0}_image [color=none, weight=100, len=0.3];'.format(cluster, sport.tag))
+        #    lines.append('    node_{0}_image -> node_{0}_{1} [color=none ];'.format(cluster, dport.tag))
+        
+        attrs = 'color=gray, weight=100, len=0.3'
+        lines.append('    node_{0}_port1 -> node_{0}_image [ {1} ];'.format(name, attrs))
+        attrs = 'color=gray, weight=100, len=0.3'
+        lines.append('    node_{0}_image -> node_{0}_dummy [ {1} ];'.format(name, attrs))
 
+        # end of subgraph
         lines.append('};')
 
         indent = ' ' * self.indent * 4

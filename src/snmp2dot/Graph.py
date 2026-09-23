@@ -1,12 +1,15 @@
 import sys
 import re
 
-from . import Port
+from .Port import Port
 
 from pprint import pprint, pformat
 
+import logging
+logger = logging.getLogger(__name__)
+
 class Graph() :
-    def __init__(self, logger=None) :
+    def __init__(self) :
         self.rankdir = "LR"
         self.ordering = "out"
         self.nodesep = None
@@ -43,6 +46,7 @@ class Graph() :
         self.edges.append(edge)
 
     def print_edges(self, fp):
+        print('DEBUG: print_edges')
         for edge in self.edges :
             edge.print(fp)
 
@@ -138,9 +142,6 @@ digraph mygraph {
     splines = false;
 
     overlap = false;
-
-    //newrank = true;
-
 '''
         fp.write(header)
    

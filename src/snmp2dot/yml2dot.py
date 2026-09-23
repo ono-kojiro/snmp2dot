@@ -13,16 +13,14 @@ import copy
 
 from pprint import pprint
 
-from snmp2dot.Graph    import Graph
-from snmp2dot.Edge     import Edge
-from snmp2dot.Terminal import Terminal
-from snmp2dot.Agent    import Agent
-from snmp2dot.Port     import Port
+from .Graph    import Graph
+from .Edge     import Edge
+from .Terminal import Terminal
+from .Agent    import Agent
+from .Port     import Port
 
 import logging
 logger = logging.getLogger(__name__)
-
-import snmp2dot
 
 def version():
     print('{0}'.format(snmp2dot.__version__))
@@ -37,9 +35,6 @@ def read_json(filepath) :
 
 def read_yaml(filepath):
     fp = open(filepath, mode="r", encoding="utf-8")
-    #tmp = yaml.load(fp, Loader=yaml.loader.SafeLoader)
-    #data = copy.deepcopy(tmp)
-
     docs = yaml.load_all(fp, Loader=yaml.loader.SafeLoader)
 
     data = {}
@@ -116,7 +111,6 @@ def main():
     output = None
     configfile = None
     logfile = None
-    #loglevel = 'info'
     loglevel = 'debug'
 
     configfiles = []
@@ -174,63 +168,111 @@ def main():
 
     if ret != 0:
         sys.exit(1)
-	
+    
     logger.debug('create Graph')
-    graph = Graph(logger=logger)
-
-    if len(configfiles) == 0:
-        configfiles = [
-            './config.yml',
-            './config.yml.local',
-        ]
-
-    configs = {
-        'nodes' : {},
-        'images' : {}
-    }
-
-    print('DEBUG: configfiles , {0}'.format(configfiles), file=sys.stderr)
-
-    for configfile in configfiles :
-        if os.path.exists(configfile):
-            tmp = read_yaml(configfile)
-            pprint(tmp, stream=sys.stderr)
-            configs = recursive_merge(configs, tmp)
-        else :
-            logger.warning("configfile '{0}' not found".format(configfile))
-
-    pprint(configs, stream=sys.stderr)
-
-    data = {}
-
-    all_ports = []
-
-    alt_ips = {}
-    if not 'nodes' in configs:
-        print('ERROR: no nodes parameter in any configuration files')
-        sys.exit(1)
-
-    for ip in configs['nodes'] :
-        if 'alternatives' in configs['nodes'][ip]:
-            for alt_ip in configs['nodes'][ip]['alternatives']:
-                alt_ips[alt_ip] = ip
+    graph = Graph()
 
     for filepath in args:
-        #data = read_json(filepath)
         data = read_yaml(filepath)
-        agent_list = data['agents']
-        a2a = data['agent2agent']
-        a2t = data['agent2terminal']
 
-        conns = a2a + a2t
+        items = data['agents']
+        for item in items:
+            sysname = item['sysname']
+            ifaces  = item['interfaces']
+            default_ifidx = item['default_ifidx']
+
+            agent = Agent(
+                        sysname=sysname,
+                        ifaces=ifaces,
+                        default_ifidx=default_ifidx,
+                    )
+            graph.add_agent(agent)
+
+        items = data['terminals']
+        for item in items:
+            ip = item['ip']
+            mac = item['mac']
+
+            terminal = Terminal(ip=ip, mac=mac)
+            graph.add_terminal(terminal)
+        
+        fp.write('    // a2t_edges\n')
+        items = data['a2t_edges']
+        for item in items:
+            sysname = item['sysname']
+            ifidx   = item['ifidx']
+            mac = item['mac']
+            ip = item['ip']
+            default_ifidx = item['default_ifidx']
+
+            src_name = re.sub(r'\.', '_', sysname)
+            dst_name = re.sub(r'\:', '_', mac)
+
+            src = 'node_{0}_port{1}'.format(src_name, ifidx)
+            if default_ifidx != ifidx :
+                dst = 'node_{0}_port1'.format(dst_name)
+            else :
+                dst = 'node_{0}_dummy'.format(dst_name)
+                tmp = dst
+                dst = src
+                src = tmp
+
+            edge = Edge(src=src, dst=dst)
+            graph.add_edge(edge)
+
+        fp.write('    // a2a_edges\n')
+        items = data['a2a_edges']
+        for item in items:
+            sysname = item['sysname']
+            ifidx   = item['ifidx']
+            mac = item['mac']
+            ip = item['ip']
+            default_ifidx = item['default_ifidx']
+            dst_sysname = item['dst_sysname']
+            dst_ifidx = item['dst_ifidx']
+
+            src_name = re.sub(r'\.', '_', sysname)
+            
+            dst_sysname = re.sub(r'\.', '_', dst_sysname)
+
+            if src_name == dst_sysname :
+                # maybe macvlan
+                continue
+
+            src = 'node_{0}_port{1}'.format(src_name, ifidx)
+            dst = 'node_{0}_port{1}'.format(dst_sysname, dst_ifidx)
+            
+            if default_ifidx == ifidx :
+                tmp = dst
+                dst = src
+                src = tmp
+
+            edge = Edge(src=src, dst=dst)
+            graph.add_edge(edge)
+
+    graph.print(fp)
+
+    if output is not None :
+        fp.close()
+    sys.exit(0)
+
+    for filepath in args:
+        data = read_yaml(filepath)
+        
+        #agent_list = data['agents']
+        #a2a = data['agent2agent']
+        #a2t = data['agent2terminal']
+
+        #conns = a2a + a2t
+        conns = []
 
         # agents
         logger.debug("begin agents loop ...")
        
-        main_ips = {}
-        for item in data['agents'] :
-            main_ip  = item['main_ip']
-            main_ips[main_ip] = 1
+        #main_ips = {}
+        #for item in data['agents'] :
+        #    main_ip  = item['main_ip']
+        #    main_ips[main_ip] = 1
 
         #
         # Agent
