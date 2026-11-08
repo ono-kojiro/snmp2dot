@@ -3,6 +3,8 @@ import re
 import logging
 logger = logging.getLogger(__name__)
 
+from jinja2 import Environment, FileSystemLoader
+
 from .agent import Agent
 
 from pprint import pprint
@@ -11,6 +13,12 @@ class DotWriter:
 
     def __init__(self, fp):
         self.fp = fp
+
+        self.env = Environment(
+            loader=FileSystemLoader("."),
+            trim_blocks=True,
+            lstrip_blocks=True,
+        )
 
     def write_edge(self, data):
 
@@ -38,30 +46,15 @@ class DotWriter:
 
         return f'node_{cluster}_port{port["pnum"]}'
 
-    def write_header(self, fp) :
-        header = '''\
-digraph mygraph {
-    imagepath="/usr/share/icons"
-
-    rankdir = "LR";
-    ordering = out;
-
-    //nodesep = "0.1";
-    ranksep = "0.3";
-
-    //splines = true;
-    //splines = curved;
-    splines = false;
-
-    overlap = false;
-'''
+    def write_header(self, fp, data) :
+        template = self.env.get_template('header.dot.j2')
+        header = template.render(**data)
         fp.write(header)
-   
-    def write_footer(self, fp) :
-        footer = '''
-}
 
-'''
+
+    def write_footer(self, fp, data) :
+        template = self.env.get_template('footer.dot.j2')
+        footer = template.render(**data)
         fp.write(footer)
 
     def write_terminal(self, data):

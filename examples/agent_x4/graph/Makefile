@@ -4,6 +4,9 @@ include $(TOP_DIR)/variables.mk
 
 FLAGS = -d
 
+$(shell cp -f ../../../header.dot.j2 .)
+$(shell cp -f ../../../footer.dot.j2 .)
+
 all : db yml dot pdf
 
 db : $(DATABASE_DB)
@@ -23,7 +26,6 @@ dot : $(GRAPH_DOT)
 
 $(GRAPH_DOT) : $(GRAPH_YML)
 	yml2dot $(FLAGS) -o $@ $<
-	#cat $@
 
 pdf : $(GRAPH_PDF)
 

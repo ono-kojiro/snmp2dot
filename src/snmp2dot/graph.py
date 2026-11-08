@@ -12,10 +12,10 @@ class Graph() :
     def __init__(self) :
         self.rankdir = "LR"
         self.ordering = "out"
-        self.nodesep = None
-        self.ranksep = 0.3
-        self.splines = False
-        self.overlap = False
+        self.nodesep = "0.1"
+        self.ranksep = "0.3"
+        self.splines = "false"
+        self.overlap = "false"
 
         self.subgraphs = []
 
@@ -23,8 +23,11 @@ class Graph() :
         self.terminals = []
         self.edges = []
 
+        self.imagepath = '/usr/share/icons'
+
     def to_dict(self):
         data = {
+            'imagepath': self.imagepath,
             'rankdir': self.rankdir,
             'ordering': self.ordering,
             'nodesep': self.nodesep,

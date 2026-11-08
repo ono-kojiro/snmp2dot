@@ -194,7 +194,6 @@ def main():
             terminal = Terminal(ip=ip, mac=mac)
             graph.add_terminal(terminal)
         
-        fp.write('    // a2t_edges\n')
         items = data['a2t_edges']
         for item in items:
             sysname = item['sysname']
@@ -218,7 +217,6 @@ def main():
             edge = Edge(src=src, dst=dst)
             graph.add_edge(edge)
 
-        fp.write('    // a2a_edges\n')
         items = data['a2a_edges']
         for item in items:
             sysname = item['sysname']
@@ -249,7 +247,7 @@ def main():
             graph.add_edge(edge)
 
     writer = DotWriter(fp)
-    writer.write_header(fp)
+    writer.write_header(fp, graph.to_dict())
 
     for agent in graph.agents :
         writer.write_agent(agent.to_dict())
@@ -260,7 +258,7 @@ def main():
     for edge in graph.edges:
         writer.write_edge(edge.to_dict())
 
-    writer.write_footer(fp)
+    writer.write_footer(fp, graph.to_dict())
 
     if output is not None :
         fp.close()
