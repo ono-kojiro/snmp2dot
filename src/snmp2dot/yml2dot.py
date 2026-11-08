@@ -13,11 +13,12 @@ import copy
 
 from pprint import pprint
 
-from .Graph    import Graph
+from .graph    import Graph
 from .Edge     import Edge
 from .terminal import Terminal
 from .agent    import Agent
 from .port     import Port
+from .dotwriter import DotWriter
 
 import logging
 logger = logging.getLogger(__name__)
@@ -247,7 +248,19 @@ def main():
             edge = Edge(src=src, dst=dst)
             graph.add_edge(edge)
 
-    graph.print(fp)
+    writer = DotWriter(fp)
+    writer.write_header(fp)
+
+    for agent in graph.agents :
+        writer.write_agent(agent.to_dict())
+
+    for terminal in graph.terminals :
+        writer.write_terminal(terminal.to_dict())
+
+    for edge in graph.edges:
+        writer.write_edge(edge.to_dict())
+
+    writer.write_footer(fp)
 
     if output is not None :
         fp.close()

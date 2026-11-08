@@ -38,6 +38,32 @@ class DotWriter:
 
         return f'node_{cluster}_port{port["pnum"]}'
 
+    def write_header(self, fp) :
+        header = '''\
+digraph mygraph {
+    imagepath="/usr/share/icons"
+
+    rankdir = "LR";
+    ordering = out;
+
+    //nodesep = "0.1";
+    ranksep = "0.3";
+
+    //splines = true;
+    //splines = curved;
+    splines = false;
+
+    overlap = false;
+'''
+        fp.write(header)
+   
+    def write_footer(self, fp) :
+        footer = '''
+}
+
+'''
+        fp.write(footer)
+
     def write_terminal(self, data):
         dport = data.get('dport')
 
