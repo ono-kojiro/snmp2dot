@@ -33,8 +33,11 @@ class Graph() :
         self.agents.append(agent)
     
     def print_agents(self, fp) :
+        writer = DotWriter(fp)
+
         for agent in self.agents :
-            agent.print(fp)
+            #agent.print(fp)
+            writer.write_agent(agent.to_dict())
 
     def add_terminal(self, terminal) :
         self.terminals.append(terminal)

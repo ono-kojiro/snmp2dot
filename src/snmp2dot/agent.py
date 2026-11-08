@@ -48,6 +48,22 @@ class Agent() :
     def set_minlen(self, minlen) :
         self.minlen = minlen
 
+    def to_dict(self):
+        data = {
+            'sysname': self.sysname,
+            'ifaces': self.ifaces,
+            'default_ifidx': self.default_ifidx,
+            'indent': self.indent,
+            'minlen': self.minlen,
+            'dports': self.dports,
+            'image': self.image,
+            'uport': self.uport,
+            'sysdescr': self.sysdescr,
+            'sysobjectid': self.sysobjectid,
+        }
+
+        return data
+    
     def print(self, fp) :
         indent = self.indent
         minlen = self.minlen
