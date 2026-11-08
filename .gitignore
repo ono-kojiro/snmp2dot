@@ -1,4 +1,6 @@
 *~
+work/
+*.deb
 
 # autotool
 #Makefile

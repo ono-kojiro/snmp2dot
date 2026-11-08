@@ -1,10 +1,22 @@
 import re
 
 __all__ = [
+  "get_mib_data",
   "normalize_mac",
   "get_dict_values",
   "get_scalar_value",
 ]
+
+def get_mib_data(data, oidname) :
+    # ex. oidname = 'RFC1213-MIB::atNetAddress'
+    mibname, objname = re.split(r'::', oidname)
+    
+    res = data.get(mibname, None)
+    if res is None:
+        return res
+
+    res = res.get(objname, None)
+    return res
 
 def get_scalar_value(data, oidname) :
     val = None

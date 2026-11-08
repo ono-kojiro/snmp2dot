@@ -3,10 +3,7 @@ TOP_DIR = .
 -include local.mk
 include  variables.mk
 
-all : build
-
-build :
-	cd ../../ && pip install -e .
+all : test
 
 test : snmp arp graph
 

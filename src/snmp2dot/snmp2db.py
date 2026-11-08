@@ -23,6 +23,8 @@ from .agent2terminal import *
 
 from .views import *
 
+from .ip_forward_mib import *
+
 def version():
     print('{0}'.format(snmp2dot.__version__))
 
@@ -41,16 +43,6 @@ def read_yaml(filepath):
     fp.close()
     return data
 
-def get_mib_data(data, oidname) :
-    # ex. oidname = 'RFC1213-MIB::atNetAddress'
-    mibname, objname = re.split(r'::', oidname)
-    
-    res = data.get(mibname, None)
-    if res is None:
-        return res
-
-    res = res.get(objname, None)
-    return res
 
 def get_mac2addrs_table(data) :
     mac2addrs = {}
@@ -853,16 +845,22 @@ def main():
         mac = get_scalar_value(data, 'BRIDGE-MIB::dot1dBaseBridgeAddress.0')
         mac = normalize_mac(mac)
         
+        tmp = get_route_next_hop(data)
+        print('DEBUG: next_hop is {0}'.format(tmp))
+        tmp = get_route_if_index(data)
+        print('DEBUG: route_if_index is {0}'.format(tmp))
+
         # for OPNsense
         if2macs = get_ipNetToMediaPhysAddress(data)
-        
         default_ifidx = get_default_ifidx(data)
-
+        print('jsonfile : {0}'.format(jsonfile))
+        print('default_ifidx is {0}'.format(default_ifidx))
         if int(default_ifidx) > int(ifnumber) :
             print('WARNING: invalid default_ifidx')
             default_ifidx = detect_default_router_port(data, default_ifidx)
             print('WARNING: changed default_ifidx to {0}'.format(default_ifidx))
         
+
         item = {
             'sysname': sysname,
             'sysdescr': sysdescr,
