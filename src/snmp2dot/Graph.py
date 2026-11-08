@@ -40,8 +40,9 @@ class Graph() :
         self.terminals.append(terminal)
 
     def print_terminals(self, fp) :
+        writer = DotWriter(fp)
         for terminal in self.terminals :
-            terminal.print(fp)
+            writer.write_terminal(terminal.to_dict())
 
     def add_edge(self, edge) :
         self.edges.append(edge)

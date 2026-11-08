@@ -2,6 +2,8 @@ TOP_DIR = ..
 -include $(TOP_DIR)/local.mk
 include $(TOP_DIR)/variables.mk
 
+FLAGS = -d
+
 all : db yml dot pdf
 
 db : $(DATABASE_DB)
@@ -20,7 +22,7 @@ $(GRAPH_YML) : $(DATABASE_DB)
 dot : $(GRAPH_DOT)
 
 $(GRAPH_DOT) : $(GRAPH_YML)
-	yml2dot -o $@ $<
+	yml2dot $(FLAGS) -o $@ $<
 	#cat $@
 
 pdf : $(GRAPH_PDF)

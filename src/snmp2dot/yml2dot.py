@@ -15,7 +15,7 @@ from pprint import pprint
 
 from .Graph    import Graph
 from .Edge     import Edge
-from .Terminal import Terminal
+from .terminal import Terminal
 from .Agent    import Agent
 from .port     import Port
 
