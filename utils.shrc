@@ -79,6 +79,11 @@ EOS
   echo "done"
 }
 
+localinstall()
+{
+  python3 -m pip install -e .  
+}
+
 install()
 {
   cp -f ${package_deb} /tmp/

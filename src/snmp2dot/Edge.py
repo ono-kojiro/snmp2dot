@@ -3,6 +3,9 @@ import re
 
 import copy
 
+import logging
+logger = logging.getLogger(__name__)
+
 DST_TYPE_TERMINAL = 0
 DST_TYPE_AGENT = 1
 
@@ -27,25 +30,20 @@ class Edge() :
     def set_dst_type(dst_type) :
         self.dport.ptype = dst_type
 
-    def print(self, fp) :
+    def to_dict(self):
+
         src = self.src
         dst = self.dst
-        fp.write('   // DEBUG: print in Edge\n')
-        
-        portpos = 'e' # east
 
-        line  = ' ' * self.indent * 4
-        if self.dst_type == DST_TYPE_AGENT :
-            tmp = src
-            src = dst
-            dst = tmp
+        if self.dst_type == DST_TYPE_AGENT:
+            src, dst = dst, src
 
-        line += '"{0}":{1} -> "{2}"'.format(src, portpos, dst)
-        if self.minlen :
-            line += ' [minlen={0}]'.format(self.minlen)
-        line += ';'
+        data = {
+            "type": "edge",
+            "src": src,
+            "dst": dst,
+            "minlen": self.minlen,
+            "is_available": self.is_available,
+        }
 
-        if self.is_available :
-            fp.write(line + '\n')
-
-
+        return data

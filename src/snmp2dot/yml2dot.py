@@ -46,6 +46,29 @@ def read_yaml(filepath):
 
     return data
 
+def setup_logging(logfile, debug):
+    fmt = logging.Formatter(
+        "%(asctime)s %(levelname)s %(name)s: %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S%z",
+    )
+
+    if logfile :
+        # FileHandler
+        handler = logging.FileHandler(logfile, mode='w')
+    else :
+        handler = logging.StreamHandler(sys.stderr)
+
+    handler.setFormatter(fmt)
+
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+
+    if debug :
+        root.setLevel(logging.DEBUG)
+    else :
+        root.setLevel(logging.INFO)
+
 def get_dports(agent_ip, uplink, conns) :
     dports = []
     
@@ -92,16 +115,16 @@ def main():
     ret = 0
 
     try:
-        opts, args = getopt.getopt(
+        opts, args = getopt.gnu_getopt(
             sys.argv[1:],
-            "hvo:c:l:L:",
+            "hvo:c:l:d",
             [
                 "help",
                 "version",
                 "output=",
                 "config=",
                 "logfile=",
-                "loglevel=",
+                "debug",
             ]
         )
     except getopt.GetoptError as err:
@@ -111,7 +134,7 @@ def main():
     output = None
     configfile = None
     logfile = None
-    loglevel = 'debug'
+    debug = False
 
     configfiles = []
 
@@ -126,8 +149,8 @@ def main():
             configfiles.append(a)
         elif o in ("-l", "--logfile"):
             logfile = a
-        elif o in ("-L", "--loglevel"):
-            loglevel = a
+        elif o in ("-d", "--debug"):
+            debug = a
         elif o in ("-o", "--output"):
             output = a
         else:
@@ -138,33 +161,7 @@ def main():
     else :
         fp = sys.stdout
 
-    if loglevel in ('info') :
-        level = logging.INFO
-    elif loglevel in ('warn', 'warning') :
-        level = logging.WARNING
-    elif loglevel in ('debug') :
-        level = logging.DEBUG
-    else :
-        print('ERROR: unknown loglevel')
-        ret += 1
-
-    if logfile is not None:
-        handler = logging.FileHandler(filename=logfile)
-    else :
-        handler = logging.StreamHandler(stream=sys.stderr)
-
-    formatter = logging.Formatter(
-        '%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%dT%H:%M:%S',
-    )
-
-    handler.setFormatter(formatter)
-    logging.basicConfig(
-        level = level,
-        handlers = [
-            handler
-        ],
-    )
+    setup_logging(logfile, debug)
 
     if ret != 0:
         sys.exit(1)

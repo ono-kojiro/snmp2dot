@@ -2,6 +2,7 @@ import sys
 import re
 
 from .Port import Port
+from .dotwriter import DotWriter
 
 from pprint import pprint, pformat
 
@@ -45,10 +46,15 @@ class Graph() :
     def add_edge(self, edge) :
         self.edges.append(edge)
 
+    #def print_edges(self, fp):
+    #    print('DEBUG: print_edges')
+    #    for edge in self.edges :
+    #        edge.print(fp)
     def print_edges(self, fp):
-        print('DEBUG: print_edges')
-        for edge in self.edges :
-            edge.print(fp)
+        writer = DotWriter(fp)
+
+        for edge in self.edges:
+            writer.write_edge(edge.to_dict())
 
     def get_agent_uports(self) :
         items = []
