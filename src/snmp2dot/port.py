@@ -14,7 +14,7 @@ class Port() :
         self.mac = mac
         self.ptype = ptype
 
-        self.direcion = direction
+        self.direction = direction
 
         if pnum is None :
             self.tag   = "dummy"
@@ -34,12 +34,19 @@ class Port() :
     def set_direction(self, val) :
         self.direction = val
 
-    def __str__(self) :
-        if self.ip :
-            cluster = self.ip
-        else :
-            cluster = self.mac
-        cluster = re.sub(r'[\.\:]', '_', cluster)
-        res = 'node_{0}_port{1}'.format(cluster, self.pnum)
-        return res
+    def to_dict(self):
+
+        data = {
+            "type": "port",
+            "pnum": self.pnum,
+            "ip": self.ip,
+            "mac": self.mac,
+            "ptype": self.ptype,
+            "direction": self.direction,
+            "is_uplink": self.is_uplink,
+            "tag": self.tag,
+            "label": self.label,
+        }
+
+        return data
 

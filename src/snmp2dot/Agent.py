@@ -3,7 +3,7 @@ import re
 
 import copy
 
-from . import Port
+from .port import Port
 
 import logging
 logger = logging.getLogger(__name__)

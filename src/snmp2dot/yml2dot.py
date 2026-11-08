@@ -17,7 +17,7 @@ from .Graph    import Graph
 from .Edge     import Edge
 from .Terminal import Terminal
 from .Agent    import Agent
-from .Port     import Port
+from .port     import Port
 
 import logging
 logger = logging.getLogger(__name__)

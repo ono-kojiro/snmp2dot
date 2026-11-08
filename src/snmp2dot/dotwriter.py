@@ -1,3 +1,5 @@
+import re
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -21,3 +23,13 @@ class DotWriter:
         self.fp.write(line)
         self.fp.write("\n")
 
+    def port_name(self, port):
+
+        if port["ip"]:
+            cluster = port["ip"]
+        else:
+            cluster = port["mac"]
+
+        cluster = re.sub(r'[.:]', '_', cluster)
+
+        return f'node_{cluster}_port{port["pnum"]}'

@@ -1,7 +1,7 @@
 import sys
 import re
 
-from .Port import Port
+from .port import Port
 
 class Terminal() :
     def __init__(self,

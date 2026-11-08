@@ -1,7 +1,7 @@
 import sys
 import re
 
-from .Port import Port
+from .port import Port
 from .dotwriter import DotWriter
 
 from pprint import pprint, pformat
