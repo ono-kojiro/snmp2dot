@@ -8,7 +8,7 @@ class Terminal() :
                  ip=None,
                  mac=None,
                  dport=None,
-                 imagepath=None,
+                 image=None,
                  is_src_port_uplink=None
         ) :
 
@@ -17,7 +17,7 @@ class Terminal() :
 
         self.indent = 1
         
-        self.imagepath = imagepath
+        self.image = image
         self.is_src_port_uplink = is_src_port_uplink
 
         self.dport = dport
@@ -26,7 +26,7 @@ class Terminal() :
         self.port_order = 0
 
     def print(self, fp) :
-        imagepath = self.imagepath
+        image = self.image
         dport = self.dport
 
         # usually dummy port
@@ -43,14 +43,14 @@ class Terminal() :
         label = self.mac
         name = re.sub(r'\:', '_', self.mac)
 
-        if imagepath is None : 
-            imagepath='icons/doc_png/pc.png'
+        if image is None : 
+            image = 'cisco/doc_png/pc.png'
 
         lines.append('subgraph cluster_{0} {{'.format(name))
         lines.append('    label = "{0}";'.format(label))
         lines.append('    node_{0}_image ['.format(name))
         lines.append('        shape=none')
-        lines.append('        image="{0}"'.format(imagepath))
+        lines.append('        image="{0}"'.format(image))
         lines.append('        label=""')
         lines.append('        fixedsize=true')
         lines.append('        imagescale=width')

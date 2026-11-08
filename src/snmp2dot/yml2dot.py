@@ -69,11 +69,11 @@ def get_dports(agent_ip, uplink, conns) :
             dports.append(dport)
     return dports
 
-def get_imagepath(configs, mac) :
-    imagepath = None
+def get_image(configs, mac) :
+    image = None
     if mac in configs['images'] :
-        imagepath = configs['images'][mac]
-    return imagepath
+        image = configs['images'][mac]
+    return image
 
 def recursive_merge(dict1, dict2):
     if dict2 is None :
@@ -302,10 +302,10 @@ def main():
 
             uport = Port(agent_mac, agent_ip, agent_uplink, Port.TYPE_AGENT)
             dports = get_dports(agent_ip, agent_uplink, conns)
-            imagepath = get_imagepath(configs, agent_mac)
+            image = get_image(configs, agent_mac)
             minlen = config.get('minlen', 4)
 
-            agent = Agent(uport, dports, imagepath,
+            agent = Agent(uport, dports, image,
                           logger=logger,
                           minlen=minlen,
                           sysdescr=agent_descr,
@@ -397,15 +397,15 @@ def main():
             ip  = conn['dst_ip']
             dst_port = "1"
 
-            imagepath = None
+            image = None
             if mac in configs['images'] :
-                imagepath = configs['images'][mac]
+                image = configs['images'][mac]
             
             dport = Port(mac, ip, dst_port, Port.TYPE_TERMINAL)
 
             edge = graph.get_edge_by_dst_mac(mac)
 
-            terminal = Terminal(dport, imagepath, \
+            terminal = Terminal(dport, image, \
                     edge.sport.is_uplink)
 
             graph.add_terminal(terminal)

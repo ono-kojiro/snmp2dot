@@ -15,7 +15,7 @@ class Agent() :
             sysname="No sysname",
             ifaces=[],
             default_ifidx=None,
-            uport=None, dports=[], imagepath=None, 
+            uport=None, dports=[], image=None, 
             logger=None,
             minlen=4, 
             sysdescr=None,
@@ -32,7 +32,7 @@ class Agent() :
         self.minlen = minlen
 
         self.dports = dports
-        self.imagepath = imagepath
+        self.image = image
 
         self.uport = uport
 
@@ -57,10 +57,10 @@ class Agent() :
         #uport    = self.uport
         #dports = self.dports
 
-        imagepath = self.imagepath
+        image = self.image
         
-        if imagepath is None :
-            imagepath = 'icons/doc_png/small_hub.png'
+        if image is None :
+            image = 'cisco/doc_png/small_hub.png'
 
         sysname = re.sub(r'\.', '_', self.sysname)
 
@@ -80,7 +80,7 @@ class Agent() :
         lines.append('')
         lines.append('    node_{0}_image ['.format(sysname))
         lines.append('        shape=none')
-        lines.append('        image="{0}"'.format(imagepath))
+        lines.append('        image="{0}"'.format(image))
         lines.append('        label=""')
         lines.append('        fixedsize=true')
         lines.append('        imagescale=height')

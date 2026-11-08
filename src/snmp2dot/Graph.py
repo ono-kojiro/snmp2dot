@@ -131,6 +131,8 @@ class Graph() :
     def print_header(self, fp) :
         header = '''\
 digraph mygraph {
+    imagepath="/usr/share/icons"
+
     rankdir = "LR";
     ordering = out;
 
