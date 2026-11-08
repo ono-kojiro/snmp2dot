@@ -13,7 +13,7 @@ def create_agent2agent_view(conn):
     view = 'a2a_view'
     c = conn.cursor()
 
-    sql = 'DROP TABLE IF EXISTS {0};'.format(view)
+    sql = 'DROP VIEW IF EXISTS {0};'.format(view)
     c.execute(sql)
 
     sql = 'CREATE VIEW {0} AS '.format(view)
