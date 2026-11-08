@@ -20,6 +20,8 @@ from .agent    import Agent
 from .port     import Port
 from .dotwriter import DotWriter
 
+from .utils import *
+
 import logging
 logger = logging.getLogger(__name__)
 
@@ -28,47 +30,6 @@ def version():
 
 def usage():
     print("Usage : {0}".format(sys.argv[0]))
-
-def read_json(filepath) :
-    with open(filepath, mode='r', encoding='utf-8') as fp :
-        data = json.loads(fp.read())
-        return data
-
-def read_yaml(filepath):
-    fp = open(filepath, mode="r", encoding="utf-8")
-    docs = yaml.load_all(fp, Loader=yaml.loader.SafeLoader)
-
-    data = {}
-    for doc in docs:
-        for key in doc :
-            data[key] = doc[key]
-
-    fp.close()
-
-    return data
-
-def setup_logging(logfile, debug):
-    fmt = logging.Formatter(
-        "%(asctime)s %(levelname)s %(name)s: %(message)s",
-        datefmt="%Y-%m-%dT%H:%M:%S%z",
-    )
-
-    if logfile :
-        # FileHandler
-        handler = logging.FileHandler(logfile, mode='w')
-    else :
-        handler = logging.StreamHandler(sys.stderr)
-
-    handler.setFormatter(fmt)
-
-    root = logging.getLogger()
-    root.handlers.clear()
-    root.addHandler(handler)
-
-    if debug :
-        root.setLevel(logging.DEBUG)
-    else :
-        root.setLevel(logging.INFO)
 
 def get_dports(agent_ip, uplink, conns) :
     dports = []
@@ -83,7 +44,7 @@ def get_dports(agent_ip, uplink, conns) :
         logger.debug("  port: {0}, uplink: {1}".format(port, uplink))
 
         if int(port) == int(uplink) :
-            logger.debug("  skip port {0}".format(port))
+            logger.debug("skip port {0}".format(port))
             continue
 
         # get all pnum from dports and create list
@@ -92,25 +53,6 @@ def get_dports(agent_ip, uplink, conns) :
             dport = Port(None, agent_ip, port, Port.TYPE_AGENT)
             dports.append(dport)
     return dports
-
-def get_image(configs, mac) :
-    image = None
-    if mac in configs['images'] :
-        image = configs['images'][mac]
-    return image
-
-def recursive_merge(dict1, dict2):
-    if dict2 is None :
-        return dict1
-
-    for key, value in dict2.items():
-        if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
-            # If both values are dictionaries, recurse
-            recursive_merge(dict1[key], value)
-        else:
-            # Otherwise, update (or add) the value
-            dict1[key] = value
-    return dict1
 
 def main():
     ret = 0
@@ -263,197 +205,6 @@ def main():
     if output is not None :
         fp.close()
     sys.exit(0)
-
-    for filepath in args:
-        data = read_yaml(filepath)
-        
-        #agent_list = data['agents']
-        #a2a = data['agent2agent']
-        #a2t = data['agent2terminal']
-
-        #conns = a2a + a2t
-        conns = []
-
-        # agents
-        logger.debug("begin agents loop ...")
-       
-        #main_ips = {}
-        #for item in data['agents'] :
-        #    main_ip  = item['main_ip']
-        #    main_ips[main_ip] = 1
-
-        #
-        # Agent
-        #
-        for item in data['agents'] :
-            logging.debug(item)
-
-            main_ip  = item['main_ip']
-            agent_ip  = item['ip']
-
-            if main_ip != agent_ip :
-                continue
-
-            agent_mac = item['mac']
-            agent_descr = item['sysdescr']
-            agent_objectid = item['sysobjectid']
-            if not agent_ip in configs['nodes']:
-                print("ERROR: no 'ip' for {0} in configfiles".format(agent_ip), file=sys.stderr)
-                print("DUMP: configs['nodes']", file=sys.stderr)
-                pprint(configs['nodes'], stream=sys.stderr)
-                sys.exit(1)
-
-            config = configs['nodes'][agent_ip]
-
-            agent_uplink = config.get('uplink', None)
-            logging.debug('{0} : is_uplink {1}'.format(agent_ip, agent_uplink))
-
-            uport = Port(agent_mac, agent_ip, agent_uplink, Port.TYPE_AGENT)
-            dports = get_dports(agent_ip, agent_uplink, conns)
-            image = get_image(configs, agent_mac)
-            minlen = config.get('minlen', 4)
-
-            agent = Agent(uport, dports, image,
-                          logger=logger,
-                          minlen=minlen,
-                          sysdescr=agent_descr,
-                          sysobjectid=agent_objectid,
-            )
-            graph.add_agent(agent)
-        
-        logger.debug("end agents loop ...")
-        logger.debug("")
-
-        all_ports.extend(graph.get_agent_uports())
-        all_ports.extend(graph.get_agent_dports())
-        
-        # edges
-        logger.debug("")
-        logger.debug("check edges ...")
-        logger.debug("conns ...")
-        #logger.debug(conns)
-
-        for conn in conns :
-            logger.debug(conn)
-
-            src_ip   = conn['src_ip']
-            src_port = conn['src_port']
-            dst_mac   = conn['dst_mac']
-            dst_ip    = conn['dst_ip']
-
-            dst_port = "1"
-
-            if dst_ip is None :
-                for agent in graph.agents :
-                    if agent.uport.mac == dst_mac :
-                        dst_ip = agent.uport.ip
-
-            if dst_ip in alt_ips :
-                dst_ip = alt_ips[dst_ip]
-
-            target = None
-            for port in all_ports :
-                if port.ip == src_ip and port.pnum == src_port :
-                    target = port
-                    break
-
-            if target is None :
-                msg = 'no port found, ip:{0}, port:{1}'.format(src_ip, src_port)
-                logger.error(msg)
-                sys.exit(1)
-
-            # add
-            #sport = Port(None, src_ip, src_port)
-            sport = target
-
-            sport.set_uplink(False)
-            dport = Port(dst_mac, dst_ip, dst_port)
-
-
-            is_src_port_uplink = False
-            is_available = True
-
-            if src_ip in configs['nodes'] : 
-                config = configs['nodes'][src_ip]
-                uplink = config.get('uplink', None)
-
-                if src_port == uplink :
-                    is_src_port_uplink = True
-                    # add
-                    sport.set_uplink(True)
-
-                draw_uplink_edge = config.get('draw_uplink_edge', None)
-                if is_src_port_uplink and draw_uplink_edge != True:
-                    is_available = False
-            
-            # if dst is Agent, use uplink port number
-            if dst_ip in configs['nodes']:
-                uplink = configs['nodes'][dst_ip].get('uplink', None)
-                dst_port = uplink
-
-                # add
-                dport.set_pnum(uplink)
-                
-            #edge = Edge(src_ip, src_port, dst_mac, dst_ip, dst_port, \
-            #            is_src_port_uplink, is_available)
-            edge = Edge(sport, dport, is_available)
-            graph.add_edge(edge)
-        
-        # terminals
-        for conn in a2t:
-            mac = conn['dst_mac']
-            ip  = conn['dst_ip']
-            dst_port = "1"
-
-            image = None
-            if mac in configs['images'] :
-                image = configs['images'][mac]
-            
-            dport = Port(mac, ip, dst_port, Port.TYPE_TERMINAL)
-
-            edge = graph.get_edge_by_dst_mac(mac)
-
-            terminal = Terminal(dport, image, \
-                    edge.sport.is_uplink)
-
-            graph.add_terminal(terminal)
-
-        # swap edge
-        for edge in graph.edges :
-            if edge.sport.is_uplink :
-                tmp = edge.sport
-                edge.sport = edge.dport
-                edge.dport = tmp
-
-                for terminal in graph.terminals :
-                    if terminal.dport.mac == edge.sport.mac :
-                        terminal.port_order = 1
-
-        for edge in graph.edges :
-            ip = edge.sport.ip
-            if ip in alt_ips:
-                ip = alt_ips[ip]
-                edge.sport.ip = ip
-                if ip in configs['nodes']:
-                    if 'uplink' in configs['nodes'][ip] :
-                        uplink = configs['nodes'][ip].get('uplink', None)
-                        edge.sport.pnum = uplink
-
-            ip = edge.dport.ip
-            if ip in alt_ips:
-                ip = alt_ips[ip]
-                edge.dport.ip = ip
-                if ip in configs['nodes']:
-                    if 'uplink' in configs['nodes'][ip] :
-                        uplink = configs['nodes'][ip].get('uplink', None)
-                        edge.dport.pnum = uplink
-
-        graph.update_edges()
-    
-    graph.print(fp)
-
-    if output is not None :
-        fp.close()
 
 if __name__ == "__main__":
     main()

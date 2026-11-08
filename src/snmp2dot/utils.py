@@ -1,11 +1,75 @@
+import sys
+
 import re
+import json
+import yaml
+
+import logging
+logger = logging.getLogger(__name__)
 
 __all__ = [
+  "read_json",
+  "read_yaml",
+  "setup_logging",
+  "recursive_merge",
   "get_mib_data",
   "normalize_mac",
   "get_dict_values",
   "get_scalar_value",
 ]
+
+def read_json(filepath) :
+    with open(filepath, mode='r', encoding='utf-8') as fp :
+        data = json.loads(fp.read())
+        return data
+
+def read_yaml(filepath):
+    fp = open(filepath, mode="r", encoding="utf-8")
+    docs = yaml.load_all(fp, Loader=yaml.loader.SafeLoader)
+
+    data = {}
+    for doc in docs:
+        for key in doc :
+            data[key] = doc[key]
+    fp.close()
+    return data
+
+def setup_logging(logfile, debug):
+    fmt = logging.Formatter(
+        "%(asctime)s %(levelname)s %(name)s: %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S%z",
+    )
+
+    if logfile :
+        # FileHandler
+        handler = logging.FileHandler(logfile, mode='w')
+    else :
+        handler = logging.StreamHandler(sys.stderr)
+
+    handler.setFormatter(fmt)
+
+    root = logging.getLogger()
+    root.handlers.clear()
+    root.addHandler(handler)
+
+    if debug :
+        root.setLevel(logging.DEBUG)
+    else :
+        root.setLevel(logging.INFO)
+
+def recursive_merge(dict1, dict2):
+    if dict2 is None :
+        return dict1
+
+    for key, value in dict2.items():
+        if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
+            # If both values are dictionaries, recurse
+            recursive_merge(dict1[key], value)
+        else:
+            # Otherwise, update (or add) the value
+            dict1[key] = value
+    return dict1
+
 
 def get_mib_data(data, oidname) :
     # ex. oidname = 'RFC1213-MIB::atNetAddress'

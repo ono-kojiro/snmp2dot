@@ -21,7 +21,7 @@ class Terminal() :
         self.is_src_port_uplink = is_src_port_uplink
 
         self.dport = dport
-        self.sport = Port(None, None, None)
+        self.sport = Port()
 
         self.port_order = 0
 

@@ -1,8 +1,6 @@
 import sys
 import re
 
-from .port import Port
-
 from pprint import pprint, pformat
 
 import logging

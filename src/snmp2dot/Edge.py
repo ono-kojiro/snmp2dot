@@ -27,7 +27,7 @@ class Edge() :
 
         self.dst_type = DST_TYPE_TERMINAL
 
-    def set_dst_type(dst_type) :
+    def set_dst_type(self, dst_type) :
         self.dport.ptype = dst_type
 
     def to_dict(self):
