@@ -1,18 +1,19 @@
 import sys
 import re
 
-from . import Port
-
 from pprint import pprint, pformat
 
+import logging
+logger = logging.getLogger(__name__)
+
 class Graph() :
-    def __init__(self, logger=None) :
+    def __init__(self) :
         self.rankdir = "LR"
         self.ordering = "out"
-        self.nodesep = None
-        self.ranksep = 0.3
-        self.splines = False
-        self.overlap = False
+        self.nodesep = "0.1"
+        self.ranksep = "0.3"
+        self.splines = "false"
+        self.overlap = "false"
 
         self.subgraphs = []
 
@@ -20,7 +21,24 @@ class Graph() :
         self.terminals = []
         self.edges = []
 
-        self.logger = logger
+        self.imagepath = '/usr/share/icons'
+
+    def to_dict(self):
+        data = {
+            'imagepath': self.imagepath,
+            'rankdir': self.rankdir,
+            'ordering': self.ordering,
+            'nodesep': self.nodesep,
+            'ranksep': self.ranksep,
+            'splines': self.splines,
+            'overlap': self.overlap,
+            'subgraphs': self.subgraphs,
+            'agents': self.agents,
+            'terminals': self.terminals,
+            'edges': self.edges,
+        }
+
+        return data
 
     def add_subgraph(self, subgraph) :
         self.subgraphs.append(subgraph)
@@ -28,23 +46,11 @@ class Graph() :
     def add_agent(self, agent) :
         self.agents.append(agent)
     
-    def print_agents(self, fp) :
-        for agent in self.agents :
-            agent.print(fp)
-
     def add_terminal(self, terminal) :
         self.terminals.append(terminal)
 
-    def print_terminals(self, fp) :
-        for terminal in self.terminals :
-            terminal.print(fp)
-
     def add_edge(self, edge) :
         self.edges.append(edge)
-
-    def print_edges(self, fp):
-        for edge in self.edges :
-            edge.print(fp)
 
     def get_agent_uports(self) :
         items = []
@@ -67,8 +73,6 @@ class Graph() :
         return item
 
     def update_edges(self) :
-        logger = self.logger
-
         dst2src = {}
         src2dst = {}
                 
@@ -87,10 +91,6 @@ class Graph() :
             if not src in src2dst :
                 src2dst[src] = []
             src2dst[src].append(edge.dport)
-
-        #lines = pformat(src2dst).splitlines() 
-        #for line in lines :
-        #    logger.info(line)
 
         targets = {}
         for dst in dst2src :
@@ -116,39 +116,3 @@ class Graph() :
             if src in targets and dst in targets[src] :
                 logger.debug('disable src:{0} to dst:{1}'.format(src, dst))
                 edge.is_available = False
-
-    def print(self, fp) :
-        self.print_header(fp)
-        self.print_agents(fp)
-        self.print_terminals(fp)
-        self.print_edges(fp)
-        self.print_footer(fp)
-    
-    def print_header(self, fp) :
-        header = '''\
-digraph mygraph {
-    rankdir = "LR";
-    ordering = out;
-
-    //nodesep = "0.1";
-    ranksep = "0.3";
-
-    //splines = true;
-    //splines = curved;
-    splines = false;
-
-    overlap = false;
-
-    //newrank = true;
-
-'''
-        fp.write(header)
-   
-    def print_footer(self, fp) :
-        footer = '''
-}
-
-'''
-        fp.write(footer)
-
-

@@ -13,35 +13,23 @@ import copy
 
 from pprint import pprint
 
-from snmp2dot.Graph    import Graph
-from snmp2dot.Edge     import Edge
-from snmp2dot.Terminal import Terminal
-from snmp2dot.Agent    import Agent
-from snmp2dot.Port     import Port
+from .graph    import Graph
+from .Edge     import Edge
+from .terminal import Terminal
+from .agent    import Agent
+from .port     import Port
+from .dotwriter import DotWriter
+
+from .utils import *
 
 import logging
 logger = logging.getLogger(__name__)
-
-import snmp2dot
 
 def version():
     print('{0}'.format(snmp2dot.__version__))
 
 def usage():
     print("Usage : {0}".format(sys.argv[0]))
-
-def read_json(filepath) :
-    with open(filepath, mode='r', encoding='utf-8') as fp :
-        data = json.loads(fp.read())
-        return data
-
-def read_yaml(filepath):
-    fp = open(filepath, mode="r", encoding="utf-8")
-    tmp = yaml.load(fp, Loader=yaml.loader.SafeLoader)
-    data = copy.deepcopy(tmp)
-    fp.close()
-
-    return data
 
 def get_dports(agent_ip, uplink, conns) :
     dports = []
@@ -56,7 +44,7 @@ def get_dports(agent_ip, uplink, conns) :
         logger.debug("  port: {0}, uplink: {1}".format(port, uplink))
 
         if int(port) == int(uplink) :
-            logger.debug("  skip port {0}".format(port))
+            logger.debug("skip port {0}".format(port))
             continue
 
         # get all pnum from dports and create list
@@ -66,39 +54,20 @@ def get_dports(agent_ip, uplink, conns) :
             dports.append(dport)
     return dports
 
-def get_imagepath(configs, mac) :
-    imagepath = None
-    if mac in configs['images'] :
-        imagepath = configs['images'][mac]
-    return imagepath
-
-def recursive_merge(dict1, dict2):
-    if dict2 is None :
-        return dict1
-
-    for key, value in dict2.items():
-        if key in dict1 and isinstance(dict1[key], dict) and isinstance(value, dict):
-            # If both values are dictionaries, recurse
-            recursive_merge(dict1[key], value)
-        else:
-            # Otherwise, update (or add) the value
-            dict1[key] = value
-    return dict1
-
 def main():
     ret = 0
 
     try:
-        opts, args = getopt.getopt(
+        opts, args = getopt.gnu_getopt(
             sys.argv[1:],
-            "hvo:c:l:L:",
+            "hvo:c:l:d",
             [
                 "help",
                 "version",
                 "output=",
                 "config=",
                 "logfile=",
-                "loglevel=",
+                "debug",
             ]
         )
     except getopt.GetoptError as err:
@@ -108,8 +77,7 @@ def main():
     output = None
     configfile = None
     logfile = None
-    #loglevel = 'info'
-    loglevel = 'debug'
+    debug = False
 
     configfiles = []
 
@@ -124,8 +92,8 @@ def main():
             configfiles.append(a)
         elif o in ("-l", "--logfile"):
             logfile = a
-        elif o in ("-L", "--loglevel"):
-            loglevel = a
+        elif o in ("-d", "--debug"):
+            debug = a
         elif o in ("-o", "--output"):
             output = a
         else:
@@ -136,253 +104,107 @@ def main():
     else :
         fp = sys.stdout
 
-    if loglevel in ('info') :
-        level = logging.INFO
-    elif loglevel in ('warn', 'warning') :
-        level = logging.WARNING
-    elif loglevel in ('debug') :
-        level = logging.DEBUG
-    else :
-        print('ERROR: unknown loglevel')
-        ret += 1
-
-    if logfile is not None:
-        handler = logging.FileHandler(filename=logfile)
-    else :
-        handler = logging.StreamHandler(stream=sys.stderr)
-
-    formatter = logging.Formatter(
-        '%(asctime)s.%(msecs)03d - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%dT%H:%M:%S',
-    )
-
-    handler.setFormatter(formatter)
-    logging.basicConfig(
-        level = level,
-        handlers = [
-            handler
-        ],
-    )
+    setup_logging(logfile, debug)
 
     if ret != 0:
         sys.exit(1)
-	
+    
     logger.debug('create Graph')
-    graph = Graph(logger=logger)
-
-    if len(configfiles) == 0:
-        configfiles = [
-            './config.yml',
-            './config.yml.local',
-        ]
-
-    configs = {
-        'nodes' : {},
-        'images' : {}
-    }
-
-    print('DEBUG: configfiles , {0}'.format(configfiles), file=sys.stderr)
-
-    for configfile in configfiles :
-        if os.path.exists(configfile):
-            tmp = read_yaml(configfile)
-            pprint(tmp, stream=sys.stderr)
-            configs = recursive_merge(configs, tmp)
-        else :
-            logger.warning("configfile '{0}' not found".format(configfile))
-
-    pprint(configs, stream=sys.stderr)
-
-    data = {}
-
-    all_ports = []
-
-    alt_ips = {}
-    if not 'nodes' in configs:
-        print('ERROR: no nodes parameter in any configuration files')
-        sys.exit(1)
-
-    for ip in configs['nodes'] :
-        if 'alternatives' in configs['nodes'][ip]:
-            for alt_ip in configs['nodes'][ip]['alternatives']:
-                alt_ips[alt_ip] = ip
+    graph = Graph()
 
     for filepath in args:
-        #data = read_json(filepath)
         data = read_yaml(filepath)
-        agent_list = data['agents']
-        a2a = data['agent2agent']
-        a2t = data['agent2terminal']
 
-        conns = a2a + a2t
+        items = data['agents']
+        for item in items:
+            sysname = item['sysname']
+            ifaces  = item['interfaces']
+            default_ifidx = item['default_ifidx']
 
-        # agents
-        logger.debug("begin agents loop ...")
-
-        for item in data['agents'] :
-            logging.debug(item)
-
-            agent_ip  = item['ip']
-            agent_mac = item['mac']
-            agent_descr = item['sysdescr']
-            agent_objectid = item['sysobjectid']
-            if not agent_ip in configs['nodes']:
-                print("ERROR: no 'ip' for {0} in configfiles".format(agent_ip), file=sys.stderr)
-                print("DUMP: configs['nodes']", file=sys.stderr)
-                pprint(configs['nodes'], stream=sys.stderr)
-                sys.exit(1)
-
-            config = configs['nodes'][agent_ip]
-
-            agent_uplink = config.get('uplink', None)
-            logging.debug('{0} : is_uplink {1}'.format(agent_ip, agent_uplink))
-
-            uport = Port(agent_mac, agent_ip, agent_uplink, Port.TYPE_AGENT)
-            dports = get_dports(agent_ip, agent_uplink, conns)
-            imagepath = get_imagepath(configs, agent_mac)
-            minlen = config.get('minlen', 4)
-
-            agent = Agent(uport, dports, imagepath,
-                          logger=logger,
-                          minlen=minlen,
-                          sysdescr=agent_descr,
-                          sysobjectid=agent_objectid,
-            )
+            agent = Agent(
+                        sysname=sysname,
+                        ifaces=ifaces,
+                        default_ifidx=default_ifidx,
+                    )
             graph.add_agent(agent)
-        
-        logger.debug("end agents loop ...")
-        logger.debug("")
 
-        all_ports.extend(graph.get_agent_uports())
-        all_ports.extend(graph.get_agent_dports())
-        
-        # edges
-        logger.debug("")
-        logger.debug("check edges ...")
-        logger.debug("conns ...")
-        #logger.debug(conns)
+        items = data['terminals']
+        for item in items:
+            ip = item['ip']
+            mac = item['mac']
 
-        for conn in conns :
-            logger.debug(conn)
-
-            src_ip   = conn['src_ip']
-            src_port = conn['src_port']
-            dst_mac   = conn['dst_mac']
-            dst_ip    = conn['dst_ip']
-
-            dst_port = "1"
-
-            if dst_ip is None :
-                for agent in graph.agents :
-                    if agent.uport.mac == dst_mac :
-                        dst_ip = agent.uport.ip
-
-            if dst_ip in alt_ips :
-                dst_ip = alt_ips[dst_ip]
-
-            target = None
-            for port in all_ports :
-                if port.ip == src_ip and port.pnum == src_port :
-                    target = port
-                    break
-
-            if target is None :
-                msg = 'no port found, ip:{0}, port:{1}'.format(src_ip, src_port)
-                logger.error(msg)
-                sys.exit(1)
-
-            # add
-            #sport = Port(None, src_ip, src_port)
-            sport = target
-
-            sport.set_uplink(False)
-            dport = Port(dst_mac, dst_ip, dst_port)
-
-
-            is_src_port_uplink = False
-            is_available = True
-
-            if src_ip in configs['nodes'] : 
-                config = configs['nodes'][src_ip]
-                uplink = config.get('uplink', None)
-
-                if src_port == uplink :
-                    is_src_port_uplink = True
-                    # add
-                    sport.set_uplink(True)
-
-                draw_uplink_edge = config.get('draw_uplink_edge', None)
-                if is_src_port_uplink and draw_uplink_edge != True:
-                    is_available = False
-            
-            # if dst is Agent, use uplink port number
-            if dst_ip in configs['nodes']:
-                uplink = configs['nodes'][dst_ip].get('uplink', None)
-                dst_port = uplink
-
-                # add
-                dport.set_pnum(uplink)
-                
-            #edge = Edge(src_ip, src_port, dst_mac, dst_ip, dst_port, \
-            #            is_src_port_uplink, is_available)
-            edge = Edge(sport, dport, is_available)
-            graph.add_edge(edge)
-        
-        # terminals
-        for conn in a2t:
-            mac = conn['dst_mac']
-            ip  = conn['dst_ip']
-            dst_port = "1"
-
-            imagepath = None
-            if mac in configs['images'] :
-                imagepath = configs['images'][mac]
-            
-            dport = Port(mac, ip, dst_port, Port.TYPE_TERMINAL)
-
-            edge = graph.get_edge_by_dst_mac(mac)
-
-            terminal = Terminal(dport, imagepath, \
-                    edge.sport.is_uplink)
-
+            terminal = Terminal(ip=ip, mac=mac)
             graph.add_terminal(terminal)
+        
+        items = data['a2t_edges']
+        for item in items:
+            sysname = item['sysname']
+            ifidx   = item['ifidx']
+            mac = item['mac']
+            ip = item['ip']
+            default_ifidx = item['default_ifidx']
 
-        # swap edge
-        for edge in graph.edges :
-            if edge.sport.is_uplink :
-                tmp = edge.sport
-                edge.sport = edge.dport
-                edge.dport = tmp
+            src_name = re.sub(r'\.', '_', sysname)
+            dst_name = re.sub(r'\:', '_', mac)
 
-                for terminal in graph.terminals :
-                    if terminal.dport.mac == edge.sport.mac :
-                        terminal.port_order = 1
+            src = 'node_{0}_port{1}'.format(src_name, ifidx)
+            if default_ifidx != ifidx :
+                dst = 'node_{0}_port1'.format(dst_name)
+            else :
+                dst = 'node_{0}_dummy'.format(dst_name)
+                tmp = dst
+                dst = src
+                src = tmp
 
-        for edge in graph.edges :
-            ip = edge.sport.ip
-            if ip in alt_ips:
-                ip = alt_ips[ip]
-                edge.sport.ip = ip
-                if ip in configs['nodes']:
-                    if 'uplink' in configs['nodes'][ip] :
-                        uplink = configs['nodes'][ip].get('uplink', None)
-                        edge.sport.pnum = uplink
+            edge = Edge(src=src, dst=dst)
+            graph.add_edge(edge)
 
-            ip = edge.dport.ip
-            if ip in alt_ips:
-                ip = alt_ips[ip]
-                edge.dport.ip = ip
-                if ip in configs['nodes']:
-                    if 'uplink' in configs['nodes'][ip] :
-                        uplink = configs['nodes'][ip].get('uplink', None)
-                        edge.dport.pnum = uplink
+        items = data['a2a_edges']
+        for item in items:
+            sysname = item['sysname']
+            ifidx   = item['ifidx']
+            mac = item['mac']
+            ip = item['ip']
+            default_ifidx = item['default_ifidx']
+            dst_sysname = item['dst_sysname']
+            dst_ifidx = item['dst_ifidx']
 
-        graph.update_edges()
-    
-    graph.print(fp)
+            src_name = re.sub(r'\.', '_', sysname)
+            
+            dst_sysname = re.sub(r'\.', '_', dst_sysname)
+
+            if src_name == dst_sysname :
+                # maybe macvlan
+                continue
+
+            src = 'node_{0}_port{1}'.format(src_name, ifidx)
+            dst = 'node_{0}_port{1}'.format(dst_sysname, dst_ifidx)
+            
+            if default_ifidx == ifidx :
+                tmp = dst
+                dst = src
+                src = tmp
+
+            edge = Edge(src=src, dst=dst)
+            graph.add_edge(edge)
+
+    writer = DotWriter(fp)
+    writer.write_header(fp, graph.to_dict())
+
+    for agent in graph.agents :
+        writer.write_agent(agent.to_dict())
+
+    for terminal in graph.terminals :
+        writer.write_terminal(terminal.to_dict())
+
+    for edge in graph.edges:
+        writer.write_edge(edge.to_dict())
+
+    writer.write_footer(fp, graph.to_dict())
 
     if output is not None :
         fp.close()
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

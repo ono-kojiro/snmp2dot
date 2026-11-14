@@ -5,12 +5,14 @@ import sys
 import getopt
 import json
 import yaml
+import re
+
+import copy
+import yaml
 
 import sqlite3
 
 from pprint import pprint
-
-import snmp2dot
 
 def version():
     print('{0}'.format(snmp2dot.__version__))
@@ -23,19 +25,23 @@ def read_json(filepath) :
         data = json.loads(fp.read())
         return data
 
-def get_agents(conn) :
+def read_yaml(filepath):
+    fp = open(filepath, mode="r", encoding="utf-8")
+    tmp = yaml.load(fp, Loader=yaml.loader.SafeLoader)
+    data = copy.deepcopy(tmp)
+    fp.close()
+    return data
+
+def get_agents_view(conn) :
     c = conn.cursor()
     sql = 'SELECT * FROM agents_view;'
     
     items = []
     rows = c.execute(sql)
     for row in rows :
-        item = {
-            'ip' : row['ip'],
-            'mac' : row['mac'],
-            'sysdescr' : row['sysdescr'],
-            'sysobjectid' : row['sysobjectid'],
-        }
+        item = {}
+        for key in row.keys():
+            item[key] = str(row[key])
         items.append(item)
 
     return items
@@ -74,17 +80,68 @@ def get_a2t_view(conn) :
 
     return items
 
+def get_graph_view(conn) :
+    c = conn.cursor()
+    sql = 'SELECT * FROM graph_view;'
+    
+    items = []
+    rows = c.execute(sql)
+    for row in rows :
+        item = {
+            'sysname'   : str(row['sysname']),
+            'ifidx'  : str(row['ifidx']),
+            'mac'  : str(row['mac']),
+            'ip'  : str(row['ip']),
+            #'default_ifidx'  : str(row['default_ifidx']),
+        }
+        items.append(item)
+
+    return items
+
+def get_a2t_edges_view(conn) :
+    c = conn.cursor()
+    sql = 'SELECT * FROM a2t_edges_view;'
+    
+    items = []
+    rows = c.execute(sql)
+    for row in rows :
+        item = {}
+        for key in row.keys():
+            if re.search(r'^dummy', key) :
+                continue
+            item[key] = str(row[key])
+        items.append(item)
+
+    return items
+
+def get_a2a_edges_view(conn) :
+    c = conn.cursor()
+    sql = 'SELECT * FROM a2a_edges_view;'
+    
+    items = []
+    rows = c.execute(sql)
+    for row in rows :
+        item = {}
+        for key in row.keys():
+            if re.search(r'^dummy', key) :
+                continue
+            item[key] = str(row[key])
+        items.append(item)
+
+    return items
+
 def main():
     ret = 0
 
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "hvo:",
+            "hvo:c:",
             [
                 "help",
                 "version",
-                "output="
+                "output=",
+                "config=",
             ]
         )
     except getopt.GetoptError as err:
@@ -92,6 +149,7 @@ def main():
         sys.exit(2)
     
     output = None
+    config_yml = None
 	
     for o, a in opts:
         if o in ("-v", "--version"):
@@ -102,6 +160,8 @@ def main():
             sys.exit(0)
         elif o in ("-o", "--output"):
             output = a
+        elif o in ("-c", "--config"):
+            config_yml = a
         else:
             assert False, "unknown option"
 	
@@ -113,25 +173,99 @@ def main():
     if ret != 0:
         sys.exit(1)
 
-    data = {}
+    #configs = read_yaml(config_yml)
 
     for database in args:
         conn = sqlite3.connect(database)
         conn.row_factory = sqlite3.Row
     
-        agents = get_agents(conn)
-        data['agents'] = agents
+        items = get_graph_view(conn)
         
-        a2a = get_a2a_view(conn)
-        data['agent2agent'] = a2a
+        fp.write('---\n')
+        fp.write('# database: {0}\n'.format(database))
+       
+        agents_view = get_agents_view(conn)
+        #pprint(agents_view)
+
+        # interfaces for agents
+        interfaces = {}
+        for item in items:
+            sysname = item['sysname']
+            ifidx   = item['ifidx']
+            if not sysname in interfaces :
+                interfaces[sysname] = {}
+            interfaces[sysname][ifidx] = 1
+
+        agents = []
+        for agent in agents_view:
+            sysname = agent['sysname']
+            agent['interfaces'] = sorted(interfaces[sysname].keys())
+            #pprint(sorted(interfaces[sysname].keys()))
+            agents.append(agent)
+
+        fp.write(
+            yaml.dump(
+                {
+                    'agents': agents,
+                },
+                #default_flow_style=True,
+            )
+        )
+        fp.write('\n')
+        fp.write('\n')
         
-        a2t = get_a2t_view(conn)
-        data['agent2terminal'] = a2t
+        items = get_a2t_edges_view(conn)
+        terminals = []
+        for item in items:
+            mac = item['mac']
+            ip  = item['ip']
 
+            terminal = {
+                'mac' : mac,
+                'ip'  : ip,
+            }
+            terminals.append(terminal)
 
-    fp.write(
-        yaml.dump(data)
-    )
+        fp.write(
+            yaml.dump(
+                {
+                    'terminals': terminals,
+                }
+            )
+        )
+        fp.write('\n')
+        fp.write('\n')
+        
+        fp.write(
+            yaml.dump(
+                {
+                    'connections' : items,
+                }
+            )
+        )
+        fp.write('\n')
+        fp.write('\n')
+
+        items = get_a2t_edges_view(conn)
+        fp.write(
+            yaml.dump(
+                {
+                    'a2t_edges' : items,
+                }
+            )
+        )
+        fp.write('\n')
+        fp.write('\n')
+        
+        items = get_a2a_edges_view(conn)
+        fp.write(
+            yaml.dump(
+                {
+                    'a2a_edges' : items,
+                }
+            )
+        )
+        fp.write('\n')
 
     if output is not None :
         fp.close()

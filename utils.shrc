@@ -1,0 +1,171 @@
+#!/bin/sh
+
+PKGNAME=`tomlq -r '.project.name' pyproject.toml`
+PKGVER=`tomlq -r '.project.version' pyproject.toml`
+
+ARCH=all
+OUTPUTDIR=.
+WHLPKGNAME=`echo $PKGNAME | tr '-' '_'`
+package_whl="dist/${WHLPKGNAME}-${PKGVER}-py3-none-any.whl"
+package_deb="${PKGNAME}_${PKGVER}_${ARCH}.deb"
+
+help()
+{
+  usage
+}
+
+usage()
+{
+  cat << EOS
+usage : $0 [options] target1 target2 ...
+
+  target:
+    build
+    pytest
+EOS
+
+}
+
+all()
+{
+  :
+}
+
+prepare()
+{
+  python3 -m pip install -e .
+  python3 -m pip install .[dev]
+}
+
+build()
+{
+  wheel 
+  deb
+}
+
+pytest()
+{
+  command pytest ${flags}
+}
+
+
+wheel()
+{
+  python3 -m build
+}
+
+deb()
+{
+  extract_wheel
+  
+  echo -n "create package ... "
+  echo ""
+  maintainer=`git config --get user.name`
+  email=`git config --get user.email`
+
+  mkdir -p $DESTDIR/DEBIAN
+  cat << EOS > $DESTDIR/DEBIAN/control
+Package: $PKGNAME
+Maintainer: $maintainer <$email>
+Architecture: $ARCH
+Version: $PKGVER
+Depends: python3-yaml, python3-pytest
+Description: $PKGNAME
+EOS
+
+  #mkdir -p $DESTDIR/usr/bin/
+
+  fakeroot dpkg-deb --build $DESTDIR $OUTPUTDIR
+  echo "done"
+}
+
+localinstall()
+{
+  python3 -m pip install -e .  
+}
+
+install()
+{
+  cp -f ${package_deb} /tmp/
+  sudo apt -y install /tmp/${package_deb}
+  rm -f /tmp/${package_deb}
+}
+
+uninstall()
+{
+  sudo apt -y remove --purge ${PKGNAME}
+}
+
+reinstall()
+{
+  uninstall
+  install
+}
+
+test()
+{
+  command pytest -s
+}
+
+extract_wheel()
+{
+  rm -rf work/dest/
+  
+  DESTDIR="work/dest/${PKGNAME}-${PKGVER}"
+  dist_packages="$DESTDIR/usr/lib/python3/dist-packages"
+  
+  pip install -v --no-deps \
+      --root "$DESTDIR" --prefix /usr $package_whl
+
+  find "$DESTDIR" -depth -name '*.pyc' -delete
+  find "$DESTDIR" -depth -name '__pycache__' -type d -exec rm -rf {} \;
+
+  find "$DESTDIR" -depth -name direct_url.json -delete
+  find "$DESTDIR" -depth -name REQUESTED -delete
+
+  mv -f  $DESTDIR/usr/local/* $DESTDIR/usr/
+  rm -rf $DESTDIR/usr/local/
+
+  mv "$DESTDIR/usr/lib/python3.14" "$DESTDIR/usr/lib/python3"
+}
+
+control()
+{
+  set -a
+  export maintainer=`git config --get user.name`
+  export email=`git config --get user.email`
+
+  export PKGNAME=${PKGNAME}
+  export PKGVER=${PKGVER}
+  cat control.in \
+      | envsubst '${PKGNAME} ${maintainer} ${email} ${PKGVER}' \
+      > debian/control
+  set +a
+}
+
+package()
+{
+  dpkg-buildpackage -us -uc
+}
+
+prove()
+{
+  cd t
+  command prove -v *.sh
+  cd ..
+}
+
+add()
+{
+  cd t
+  command prove -v *-add_*.sh
+  cd ..
+}
+
+delete()
+{
+  cd t
+  command prove -v *-delete_*.sh
+  cd ..
+}
+

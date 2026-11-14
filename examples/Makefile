@@ -3,7 +3,7 @@ TOP_DIR = .
 -include $(TOP_DIR)/local.mk
 include $(TOP_DIR)/variables.mk
 
-all : json db yml dot pdf
+all : snmp arp
 
 prepare :
 	sudo apt -y install snmp sqlite3
@@ -13,6 +13,9 @@ debug :
 
 snmp :
 	$(MAKE) -C snmp
+
+arp :
+	$(MAKE) -C arp
 
 json : $(SNMPLOG_JSON) $(ARPLOG_JSON)
 
@@ -42,28 +45,19 @@ dot : $(GRAPH_DOT)
 	#yml2dot -o $@ $<
 	yml2dot --config config.yml -o $@ $<
 
-arp :
-	sh run_arpscan.sh
-
 pdf : $(GRAPH_PDF)
 
 $(GRAPH_PDF) : $(GRAPH_DOT)
 	dot -Tpdf -o $@ $<
 
 clean :
-	rm -f $(SNMPLOG_JSON)
-	rm -f $(ARPLOG_JSON)
-	rm -f $(DATABASE_DB)
-	rm -f $(DATABASE_SQL)
-	rm -f $(GRAPH_YAML)
-	rm -f $(GRAPH_DOT)
-	rm -f $(GRAPH_PDF)
-	
+	$(MAKE) -C snmp clean
+	$(MAKE) -C arp  clean
+
 mclean :
-	$(MAKE) clean
-	rm -f $(SNMPLOG_SNMP)
-	rm -f $(ARPLOG_ARP)
+	$(MAKE) -C snmp mclean
+	$(MAKE) -C arp  mclean
 
 .PHONY : \
-	all clean test snmp
+	all clean test snmp arp
 
